@@ -1,0 +1,8 @@
+{
+    "paths" : {
+        "code": "/home/username/code/",
+        "data": "/home/username/data/",
+        "figs": "/home/username/figures/",
+        "tikz": "/home/username/tikzpics/",
+    }
+}

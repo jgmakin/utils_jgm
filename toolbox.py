@@ -777,3 +777,8 @@ class IterPlotter:
             if user_input == 'q':
                 print('quitting...')
                 break
+
+
+# for importing from json files.  Cribbed from ???
+def str2int_hook(d):
+    return {int(k) if k.lstrip('-').isdigit() else k: v for k, v in d.items()}

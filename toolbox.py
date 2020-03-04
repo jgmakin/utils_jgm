@@ -11,7 +11,9 @@ from IPython import display
 import numpy as np
 import matplotlib.pyplot as plt
 import tfmpl
-
+import scipy.signal as signal
+from scipy.stats.mstats import zscore
+import samplerate
 
 # see "The Tau Manifesto"
 tau = 2*np.pi
@@ -782,3 +784,61 @@ class IterPlotter:
 # for importing from json files.  Cribbed from ???
 def str2int_hook(d):
     return {int(k) if k.lstrip('-').isdigit() else k: v for k, v in d.items()}
+
+
+def anti_alias_and_resample(
+    data, F_sampling, F_target, F_high=None, F_transition=None, atten_DB=40,
+    ZSCORE=True
+):
+    if F_high is None:
+        # just set it to Nyquist
+        F_high = F_target/2
+    if F_transition is None:
+        F_transition = 0.2*F_target
+
+    data = anti_alias(data, F_sampling, F_high, F_transition, atten_DB)
+    return resample(data, F_sampling, F_target, ZSCORE)
+
+
+def anti_alias(data, F_sampling, F_high, F_transition, atten_DB):
+
+    F_nyquist = F_sampling/2
+
+    # The fred harris rule of thumb:
+    #   N = [(fs)/delta(f)]∗[atten(dB)/22]
+    #   https://dsp.stackexchange.com/questions/37646
+    # But you run filtfilt, which effectively doubles the order, so only
+    #   need N/2
+    N = (F_sampling/F_transition*atten_DB/22)/2
+    # N = 2**int(np.ceil(np.log2(N)))  # use a power of 2
+    N = 2*int(N//2) + 1  # use odd number
+
+    # filter forwards and backwards
+    desired = (1, 1, 0, 0)
+    bands = (0, F_high, F_high+F_transition, F_nyquist)
+    fir_firls = signal.firls(N, bands, desired, fs=F_sampling)
+    for iElectrode, raw_signal in enumerate(data.T):
+        data[:, iElectrode] = signal.filtfilt(fir_firls, 1, raw_signal)
+    return data
+
+
+def resample(data, F_sampling, F_target, ZSCORE, resample_method='sinc_best'):
+
+    # sadly, 128 is the max for the underlying library
+    N_chans_max = 128
+    N_chans = data.shape[1]
+    data_mat = None
+
+    ratio = F_target/F_sampling
+    for initial_ind in np.arange(0, N_chans, N_chans_max):
+        final_ind = np.min((initial_ind+N_chans_max, N_chans))
+        resampler = samplerate.Resampler(
+            resample_method, channels=final_ind-initial_ind)
+        data_chunk = resampler.process(
+            data[:, initial_ind:final_ind], ratio, end_of_input=True)
+        data_mat = (data_chunk if data_mat is None else
+                    np.concatenate((data_mat, data_chunk), axis=1))
+    if ZSCORE:
+        data_mat = zscore(data_mat)
+
+    return data_mat

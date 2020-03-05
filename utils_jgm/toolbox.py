@@ -10,7 +10,7 @@ from IPython import display
 # third-party packages
 import numpy as np
 import matplotlib.pyplot as plt
-import tfmpl
+# import tfmpl
 import scipy.signal as signal
 from scipy.stats.mstats import zscore
 import samplerate
@@ -316,19 +316,19 @@ def close_factors(n, num_factors):
         return factor_list
 
 
-# ...
-def draw_confusion_matrix(matrix, axis_labels, figsize):
-    '''Draw confusion matrix for MNIST.'''
-    fig = tfmpl.create_figure(figsize=figsize)
-    ax = fig.add_subplot(111)
-    ax.set_title('Confusion matrix')
-
-    tfmpl.plots.confusion_matrix.draw(
-        ax, matrix,
-        axis_labels=axis_labels,
-        normalize=True
-    )
-    return fig
+# # ...
+# def draw_confusion_matrix(matrix, axis_labels, figsize):
+#     '''Draw confusion matrix for MNIST.'''
+#     fig = tfmpl.create_figure(figsize=figsize)
+#     ax = fig.add_subplot(111)
+#     ax.set_title('Confusion matrix')
+#
+#     tfmpl.plots.confusion_matrix.draw(
+#         ax, matrix,
+#         axis_labels=axis_labels,
+#         normalize=True
+#     )
+#     return fig
 
 
 # ...
@@ -364,55 +364,55 @@ def heatmap_confusions(
 
 
 # DEPRECATED
-def heatmap_confusionsOLD(
-        axis_labels_x=None, axis_labels_y=None,
-        fig=plt.figure(figsize=(40, 40))):
-
-    # init
-    your_colorbar = None
-
-    # the actual plotting function
-    def heatmap_nonzero_rows(p_of_x_given_y):
-
-        # get rid of any old colorbars
-        nonlocal your_colorbar
-        if your_colorbar is not None:
-            your_colorbar.remove()
-
-        # get the axis labels
-        x_range, y_range = p_of_x_given_y.shape
-        ax = fig.add_subplot(1, 1, 1)
-        x_axis_labels = axis_labels_x if axis_labels_x else np.arange(x_range)
-        y_axis_labels = axis_labels_y if axis_labels_y else np.arange(y_range)
-
-        # select out the subset for which there are non-zero y's
-        y_is_non_zero = np.sum(p_of_x_given_y, axis=1) > 0
-        x_axis_labels = np.array(x_axis_labels)[y_is_non_zero]
-        y_axis_labels = np.array(y_axis_labels)[y_is_non_zero]
-        p_of_x_given_y = p_of_x_given_y[np.ix_(y_is_non_zero, y_is_non_zero)]
-
-        # clear the axes and plot with colorbar
-        plt.cla()
-        cax = ax.imshow(p_of_x_given_y)
-        ax.grid(False)
-        your_colorbar = fig.colorbar(cax)
-
-        # labels
-        plt.xlabel('q')
-        plt.ylabel('p')
-        plt.xticks(np.arange(x_range), x_axis_labels, rotation=90)
-        plt.yticks(np.arange(y_range), y_axis_labels)
-
-        # clear the display whenever new output arrives
-        display.display(plt.gcf())
-        display.clear_output(wait=True)
-        # time.sleep(1.0)
-
-        # return the colorbar to the outerscope--probably not necessary
-        # return your_colorbar
-
-    heatmap_dict = {'plotter': heatmap_nonzero_rows, 'figure': fig}
-    return heatmap_dict
+# def heatmap_confusionsOLD(
+#         axis_labels_x=None, axis_labels_y=None,
+#         fig=plt.figure(figsize=(40, 40))):
+#
+#     # init
+#     your_colorbar = None
+#
+#     # the actual plotting function
+#     def heatmap_nonzero_rows(p_of_x_given_y):
+#
+#         # get rid of any old colorbars
+#         nonlocal your_colorbar
+#         if your_colorbar is not None:
+#             your_colorbar.remove()
+#
+#         # get the axis labels
+#         x_range, y_range = p_of_x_given_y.shape
+#         ax = fig.add_subplot(1, 1, 1)
+#         x_axis_labels = axis_labels_x if axis_labels_x else np.arange(x_range)
+#         y_axis_labels = axis_labels_y if axis_labels_y else np.arange(y_range)
+#
+#         # select out the subset for which there are non-zero y's
+#         y_is_non_zero = np.sum(p_of_x_given_y, axis=1) > 0
+#         x_axis_labels = np.array(x_axis_labels)[y_is_non_zero]
+#         y_axis_labels = np.array(y_axis_labels)[y_is_non_zero]
+#         p_of_x_given_y = p_of_x_given_y[np.ix_(y_is_non_zero, y_is_non_zero)]
+#
+#         # clear the axes and plot with colorbar
+#         plt.cla()
+#         cax = ax.imshow(p_of_x_given_y)
+#         ax.grid(False)
+#         your_colorbar = fig.colorbar(cax)
+#
+#         # labels
+#         plt.xlabel('q')
+#         plt.ylabel('p')
+#         plt.xticks(np.arange(x_range), x_axis_labels, rotation=90)
+#         plt.yticks(np.arange(y_range), y_axis_labels)
+#
+#         # clear the display whenever new output arrives
+#         display.display(plt.gcf())
+#         display.clear_output(wait=True)
+#         # time.sleep(1.0)
+#
+#         # return the colorbar to the outerscope--probably not necessary
+#         # return your_colorbar
+#
+#     heatmap_dict = {'plotter': heatmap_nonzero_rows, 'figure': fig}
+#     return heatmap_dict
 
 
 def fig_to_rgb_array(fig, EXPAND=True):

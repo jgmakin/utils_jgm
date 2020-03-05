@@ -1,6 +1,7 @@
 import socket
 import os
 import subprocess
+import platform
 import json
 
 '''
@@ -33,6 +34,10 @@ class MachineCompatibilityUtils:
         if os.name == 'nt':
             _, num_CPUs_str = subprocess.getstatusoutput(
                 'echo %NUMBER_OF_PROCESSORS%')
+            self.num_CPUs = int(num_CPUs_str)
+        elif platform.system() == 'Darwin':
+            _, num_CPUs_str = subprocess.getstatusoutput(
+                'sysctl -n hw.physicalcpu')
             self.num_CPUs = int(num_CPUs_str)
         else:
             _, num_CPUs_str = subprocess.getstatusoutput('nproc')

@@ -31,6 +31,12 @@ def tpl_save(
     standard_pre_tikzpicture_lines = {
         '\\providecommand{\\thisXlabelopacity}{1.0}',
         '\\providecommand{\\thisYlabelopacity}{1.0}',
+        '\\provideboolean{CLEANXAXIS}'  # false by default
+        '\\ifthenelse{\\boolean{CLEANXAXIS}}{'
+        '\\pgfplotsset{xticklabels={,,}, xlabel={}}}{}%',
+        '\\provideboolean{CLEANYAXIS}'  # false by default
+        '\\ifthenelse{\\boolean{CLEANYAXIS}}{'
+        '\\pgfplotsset{yticklabels={,,}, ylabel={}}}{}%',
         '\\pgfplotsset{compat=1.15}',
     }
     pre_tikzpicture_lines = augment_params_set(
@@ -48,8 +54,7 @@ def tpl_save(
 
     # get the code
     code = tpl.get_tikz_code(
-        *args, **kwargs,
-        extra_axis_parameters=extra_axis_parameters,
+        *args, **kwargs, extra_axis_parameters=extra_axis_parameters,
     )
 
     # tack some extra code before anything

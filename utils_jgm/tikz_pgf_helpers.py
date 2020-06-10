@@ -27,16 +27,19 @@ def tpl_save(
     **kwargs
 ):
 
-    # always pass certain pre-tikzpicture lines
+    # Always pass certain pre-tikzpicture lines.
+    # NB: *ticklabels will appear even when not defined explicitly in the
+    #  pgfplots axis, so we have to provide for wiping them out before the
+    #  plot even begins.
     standard_pre_tikzpicture_lines = {
         '\\providecommand{\\thisXlabelopacity}{1.0}',
         '\\providecommand{\\thisYlabelopacity}{1.0}',
         '\\provideboolean{CLEANXAXIS}'  # false by default
         '\\ifthenelse{\\boolean{CLEANXAXIS}}{'
-        '\\pgfplotsset{xticklabels={,,}, xlabel={}}}{}%',
+        '\\pgfplotsset{xticklabels={,,}}}{}%',
         '\\provideboolean{CLEANYAXIS}'  # false by default
         '\\ifthenelse{\\boolean{CLEANYAXIS}}{'
-        '\\pgfplotsset{yticklabels={,,}, ylabel={}}}{}%',
+        '\\pgfplotsset{yticklabels={,,}}}{}%',
         '\\pgfplotsset{compat=1.15}',
     }
     pre_tikzpicture_lines = augment_params_set(
@@ -70,6 +73,26 @@ def tpl_save(
             reduce(lambda a, b: b+'\n'+a, reversed(extra_body_parameters), end_axis) +
             code_pieces[1]
         )
+
+    # allow for elimination of the xlabel and ylabel [this is not pretty]
+    code = code.replace(
+        'xlabel=', 'xlabel=\\ifthenelse{\\boolean{CLEANXAXIS}}{}'
+    )
+    code = code.replace(
+        'ylabel=', 'ylabel=\\ifthenelse{\\boolean{CLEANYAXIS}}{}'
+    )
+
+    # If the *ticklabels were set explicitly, the pgfplotset above will be
+    #  overridden.  So we add this to catch those cases.
+    ##########
+    # UNTESTED
+    code = code.replace(
+        'xticklabels=', 'xticklabels=\\ifthenelse{\\boolean{CLEANXAXIS}}{}'
+    )
+    code = code.replace(
+        'tticklabels=', 'tticklabels=\\ifthenelse{\\boolean{CLEANYAXIS}}{}'
+    )
+    ##########
 
     # finally, write out the file
     file_handle = codecs.open(filepath, "w", encoding)

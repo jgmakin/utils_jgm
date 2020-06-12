@@ -29,17 +29,19 @@ def tpl_save(
 
     # Always pass certain pre-tikzpicture lines.
     # NB: *ticklabels will appear even when not defined explicitly in the
-    #  pgfplots axis, so we have to provide for wiping them out before the
-    #  plot even begins.
+    #  pgfplots axis, so we have to provide for wiping them out before the plot
+    #  even begins.
+    # NB!!  Don't remove the spaces around the equals sign (=)!!  They prevent
+    #  this piece of tex code from being replaced below.
     standard_pre_tikzpicture_lines = {
         '\\providecommand{\\thisXlabelopacity}{1.0}',
         '\\providecommand{\\thisYlabelopacity}{1.0}',
         '\\provideboolean{CLEANXAXIS}'  # false by default
         '\\ifthenelse{\\boolean{CLEANXAXIS}}{'
-        '\\pgfplotsset{xticklabels={,,}}}{}%',
+        '\\pgfplotsset{xticklabels = {,,}}}{}%',
         '\\provideboolean{CLEANYAXIS}'  # false by default
         '\\ifthenelse{\\boolean{CLEANYAXIS}}{'
-        '\\pgfplotsset{yticklabels={,,}}}{}%',
+        '\\pgfplotsset{yticklabels = {,,}}}{}%',
         '\\pgfplotsset{compat=1.15}',
     }
     pre_tikzpicture_lines = augment_params_set(

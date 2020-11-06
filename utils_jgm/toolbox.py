@@ -10,7 +10,12 @@ from IPython import display
 # third-party packages
 import numpy as np
 import matplotlib.pyplot as plt
-import tfmpl
+try:
+    import tfmpl
+except ModuleNotFoundError:
+    print('Package conflict (probably because you are using TF2.x)', end='')
+    print('...not loading tfmpl...')
+
 import scipy.signal as signal
 from scipy.stats.mstats import zscore
 import samplerate

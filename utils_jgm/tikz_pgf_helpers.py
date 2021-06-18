@@ -28,22 +28,26 @@ def tpl_save(
 ):
 
     # Always pass certain pre-tikzpicture lines.
-    # NB: *ticklabels will appear even when not defined explicitly in the
-    #  pgfplots axis, so we have to provide for wiping them out before the plot
-    #  even begins.
-    # NB!!  Don't remove the spaces around the equals sign (=)!!  They prevent
-    #  this piece of tex code from being replaced below.
     standard_pre_tikzpicture_lines = {
         '\\providecommand{\\thisXlabelopacity}{1.0}',
         '\\providecommand{\\thisYlabelopacity}{1.0}',
-        '\\provideboolean{CLEANXAXIS}'  # false by default
-        '\\ifthenelse{\\boolean{CLEANXAXIS}}{'
-        '\\pgfplotsset{xticklabels = {,,}}}{}%',
-        '\\provideboolean{CLEANYAXIS}'  # false by default
-        '\\ifthenelse{\\boolean{CLEANYAXIS}}{'
-        '\\pgfplotsset{yticklabels = {,,}}}{}%',
         '\\pgfplotsset{compat=1.15}',
     }
+
+    # To allow the boolean to shut these params off, even if they had been
+    #  explicitly set to values, use post/.append style
+    for boolean, axis_param in zip(
+        ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS'],
+        ['xticklabels', 'xlabel', 'yticklabels', 'ylabel']
+    ):
+        standard_pre_tikzpicture_lines |= {
+            '\\provideboolean{%s}'
+            '\\ifthenelse{\\boolean{%s}}{%%'
+            '\n\t\\pgfplotsset{every axis post/.append style={%s = {} }}%%'
+            '\n}{}%%' % (boolean, boolean, axis_param)
+        }
+
+    # don't forget any pre_tikzpicture_lines that have been passed as args
     pre_tikzpicture_lines = augment_params_set(
         pre_tikzpicture_lines, standard_pre_tikzpicture_lines
     )
@@ -75,26 +79,6 @@ def tpl_save(
             reduce(lambda a, b: b+'\n'+a, reversed(extra_body_parameters), end_axis) +
             code_pieces[1]
         )
-
-    # allow for elimination of the xlabel and ylabel [this is not pretty]
-    code = code.replace(
-        'xlabel=', 'xlabel=\\ifthenelse{\\boolean{CLEANXAXIS}}{}'
-    )
-    code = code.replace(
-        'ylabel=', 'ylabel=\\ifthenelse{\\boolean{CLEANYAXIS}}{}'
-    )
-
-    # If the *ticklabels were set explicitly, the pgfplotset above will be
-    #  overridden.  So we add this to catch those cases.
-    ##########
-    # UNTESTED
-    code = code.replace(
-        'xticklabels=', 'xticklabels=\\ifthenelse{\\boolean{CLEANXAXIS}}{}'
-    )
-    code = code.replace(
-        'tticklabels=', 'tticklabels=\\ifthenelse{\\boolean{CLEANYAXIS}}{}'
-    )
-    ##########
 
     # finally, write out the file
     file_handle = codecs.open(filepath, "w", encoding)

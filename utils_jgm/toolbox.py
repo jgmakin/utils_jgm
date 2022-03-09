@@ -1,10 +1,9 @@
 # standard libraries
 from functools import wraps
-import inspect
 import string
 import pdb
 from collections import Sequence
-from inspect import Signature, Parameter
+from inspect import Signature, Parameter, getfullargspec
 import re
 from IPython import display
 
@@ -116,7 +115,7 @@ def _assign_args(
     instance, args, kwargs, function, CHECK_MANIFEST=False
 ):
     (POSITIONAL_PARAMS, VARIABLE_PARAM, _, KEYWORD_DEFAULTS, _,
-     KEYWORD_ONLY_DEFAULTS, _) = inspect.getfullargspec(function)
+     KEYWORD_ONLY_DEFAULTS, _) = getfullargspec(function)
     POSITIONAL_PARAMS = POSITIONAL_PARAMS[1:]  # remove 'self'
     if CHECK_MANIFEST:
         manifest_index = POSITIONAL_PARAMS.index('manifest')
@@ -747,6 +746,10 @@ def anti_alias_and_resample(
     data, F_sampling, F_target, F_high=None, F_transition=None, atten_DB=40,
     ZSCORE=True
 ):
+    ##############
+    # Retire?
+    ##############
+
     if F_high is None:
         # just set it to Nyquist
         F_high = F_target/2
@@ -754,7 +757,12 @@ def anti_alias_and_resample(
         F_transition = 0.2*F_target
 
     data = anti_alias(data, F_sampling, F_high, F_transition, atten_DB)
-    return resample(data, F_sampling, F_target, ZSCORE)
+    source_to_target_ratio = F_sampling/F_target
+    # if source_to_target_ratio == F_sampling//F_target:
+    #     print('integer downsampling...')
+    #     return data[::int(source_to_target_ratio)]
+    # else:
+    return resample(data, source_to_target_ratio, ZSCORE)
 
 
 def anti_alias(data, F_sampling, F_high, F_transition, atten_DB):
@@ -774,27 +782,34 @@ def anti_alias(data, F_sampling, F_high, F_transition, atten_DB):
     desired = (1, 1, 0, 0)
     bands = (0, F_high, F_high+F_transition, F_nyquist)
     fir_firls = signal.firls(N, bands, desired, fs=F_sampling)
+    data_anti_aliased = np.zeros_like(data)
     for iElectrode, raw_signal in enumerate(data.T):
-        data[:, iElectrode] = signal.filtfilt(fir_firls, 1, raw_signal)
-    return data
+        data_anti_aliased[:, iElectrode] = signal.filtfilt(
+            fir_firls, 1, raw_signal)
+
+    return data_anti_aliased
 
 
-def resample(data, F_sampling, F_target, ZSCORE, resample_method='sinc_best'):
+def resample(
+    data, source_to_target_ratio, ZSCORE, resample_method='sinc_best',
+    N_channels_max=128
+):
 
-    # sadly, 128 is the max for the underlying library
-    N_chans_max = 128
-    N_chans = data.shape[1]
+    # 128 is the max for the underlying library
+    N_channels_max = min(N_channels_max, 128)
+    N_channels = data.shape[1]
     data_mat = None
 
-    ratio = F_target/F_sampling
-    for initial_ind in np.arange(0, N_chans, N_chans_max):
-        final_ind = np.min((initial_ind+N_chans_max, N_chans))
-        resampler = samplerate.Resampler(
-            resample_method, channels=final_ind-initial_ind)
+    for i0 in np.arange(0, N_channels, N_channels_max):
+        iF = np.min((i0+N_channels_max, N_channels))
+        resampler = samplerate.Resampler(resample_method, channels=iF-i0)
         data_chunk = resampler.process(
-            data[:, initial_ind:final_ind], ratio, end_of_input=True)
-        data_mat = (data_chunk if data_mat is None else
-                    np.concatenate((data_mat, data_chunk), axis=1))
+            data[:, i0:iF], 1/source_to_target_ratio, end_of_input=True
+        )
+        data_mat = (
+            data_chunk if data_mat is None else
+            np.concatenate((data_mat, data_chunk), axis=1)
+        )
     if ZSCORE:
         data_mat = zscore(data_mat)
 

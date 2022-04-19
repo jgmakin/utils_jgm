@@ -795,6 +795,10 @@ def resample(
     N_channels_max=128
 ):
 
+    ######################
+    # If downsampling by an integer, just anti-alias and subsample??
+    ######################
+
     # 128 is the max for the underlying library
     N_channels_max = min(N_channels_max, 128)
     N_channels = data.shape[1]

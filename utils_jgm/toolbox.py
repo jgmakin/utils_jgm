@@ -2,7 +2,10 @@
 from functools import wraps
 import string
 import pdb
-from collections import Sequence
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 from inspect import Signature, Parameter, getfullargspec
 import re
 from IPython import display

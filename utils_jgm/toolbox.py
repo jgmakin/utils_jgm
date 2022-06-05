@@ -848,3 +848,44 @@ def generate_password(N=8, special_characters=None):
         )
 
     return ''.join(list(np.random.choice(np.array(password), N, replace=False)))
+
+
+def time2index(event_times, sampling_rate=None, analog_times=None):
+    '''
+    Find the index of the analog_time nearest the event_times, either by
+    expliciting looking at the vector of analog_times, or (if it is uniformly
+    sampled) simply by multiplying the event_times by the sampling_rate and
+    rounding.
+    '''
+
+    # xor: one or the other but not both of the inputs must be None
+    assert (sampling_rate is None) != (analog_times is None)
+
+    # for uniformly sampled data, it's simple
+    if sampling_rate is not None:
+        event_indices = np.rint(sampling_rate*event_times).astype(int)
+        return event_indices
+
+    # for non-uniformly sampled (but still ordered) times it's more complicated
+    else:        
+        # Modified from https://stackoverflow.com/questions/2566412
+
+        # find the index where we would insert the events (binary search)
+        event_indices = np.searchsorted(analog_times, event_times, side="left")
+
+        # events lying beyond last index are closest to last index
+        BEYOND_LAST_INDEX = event_indices == len(analog_times)
+        event_indices[BEYOND_LAST_INDEX] -= 1
+
+        # events closer to the previous index
+        CLOSER_TO_PREVIOUS_INDEX = (
+            # distance to previous index (unless there is no prev. index)
+            np.fabs(event_times - analog_times[np.maximum(
+                event_indices-1, 0)]
+            ) < 
+            # distance to next index
+            np.fabs(event_times - analog_times[event_indices])
+        )
+        event_indices[CLOSER_TO_PREVIOUS_INDEX] -= 1
+
+        return event_indices

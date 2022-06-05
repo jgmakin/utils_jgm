@@ -1,6 +1,6 @@
 # standard libraries
 import time
-import functools
+from functools import partial
 import pdb
 
 # third-party libraries
@@ -89,7 +89,6 @@ class Widgetizer():
                 if self.sleep:
                     time.sleep(self.sleep/len(scan_values))
 
-
     def get_layout(self):
         # the layout of plots and sliders
         layout = Layout(
@@ -103,9 +102,7 @@ class Widgetizer():
         buttons = {}
         for key in self.independent_sliders:
             buttons[key] = Button(icon="play")
-            buttons[key].on_click(
-                functools.partial(self.scan_parameter, param=key)
-            )
+            buttons[key].on_click(partial(self.scan_parameter, param=key))
             buttons[key].layout.width = '70px'
 
         # put together sliders and buttons

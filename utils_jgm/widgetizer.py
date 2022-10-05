@@ -48,6 +48,7 @@ class Widgetizer():
             plots_dict=self.plots_dict,
         )
         
+        time.sleep(0.2)
         if hasattr(self, 'dependent_sliders'):
             # update dependent sliders
             for key, value in slider_updates.items():

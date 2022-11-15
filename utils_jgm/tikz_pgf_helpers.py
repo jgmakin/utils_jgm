@@ -117,9 +117,9 @@ def tpl_save(
 
 def augment_params(passed, defaults):
     if type(passed) is set:
-        return passed | defaults
+        return list(passed | defaults)
     elif passed is None:
-        return defaults
+        return list(defaults)
     elif type(passed) is list:
         return list(defaults) + passed
     else:

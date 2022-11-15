@@ -27,8 +27,8 @@ def tpl_save(
     **kwargs
 ):
 
-    # Always pass certain pre-tikzpicture lines.
-    standard_pre_tikzpicture_lines = {
+    # (1) STANDARD PRE-TIKZPICTURE LINES (before everything)
+    default_pre_tikzpicture_lines = {
         '\\providecommand{\\thisXlabelopacity}{1.0}',
         '\\providecommand{\\thisYlabelopacity}{1.0}',
         '\\pgfplotsset{compat=1.15}',
@@ -40,38 +40,62 @@ def tpl_save(
         ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS', 'CLEANTITLE'],
         ['xticklabels', 'xlabel', 'yticklabels', 'ylabel', 'title']
     ):
-        standard_pre_tikzpicture_lines |= {
+        default_pre_tikzpicture_lines |= {
             '\\provideboolean{%s}'
             '\\ifthenelse{\\boolean{%s}}{%%'
             '\n\t\\pgfplotsset{every axis post/.append style={%s = {} }}%%'
             '\n}{}%%' % (boolean, boolean, axis_param)
         }
 
-    # don't forget any pre_tikzpicture_lines that have been passed as args
-    pre_tikzpicture_lines = augment_params_set(
-        pre_tikzpicture_lines, standard_pre_tikzpicture_lines
-    )
+    # booleans for the extra_body_parameters
+    extra_body_booleans = ['LEGEND']
+    extra_body_commands = ['\\legend{}']
+    for boolean in extra_body_booleans:
+        default_pre_tikzpicture_lines |= {
+            '\\provideboolean{%s}%%' % (boolean)
+        }
 
-    # always pass certain axis parameters
-    standard_axis_parameters = {
+    # (2) STANDARD AXIS PARAMETERS (passed to \begin{axis})
+    default_axis_parameters = {
         'every axis x label/.append style={opacity=\\thisXlabelopacity}',
         'every axis y label/.append style={opacity=\\thisYlabelopacity}',
     }
-    extra_axis_parameters = augment_params_set(
-        extra_axis_parameters, standard_axis_parameters
-    )
 
-    # get the code
+    # (3) STANDARD BODY PARAMETERS (before \end{axis})
+    for boolean, command in zip(
+        extra_body_booleans, extra_body_commands
+    ):
+        default_body_parameters = {
+            '\\ifthenelse{\\boolean{%s}}{%s}{}' % (boolean, command)
+        }
+
+
+    # now add in the extra content provided by the user as args
+    # for lines, default_lines in zip(
+    #     [pre_tikzpicture_lines, extra_axis_parameters, extra_body_parameters],
+    #     [default_pre_tikzpicture_lines, default_axis_parameters,
+    #      default_body_parameters]
+    # ):
+    #     lines = augment_params_set(lines, default_lines)
+    pre_tikzpicture_lines = augment_params(
+        pre_tikzpicture_lines, default_pre_tikzpicture_lines)
+    extra_axis_parameters = augment_params(
+        extra_axis_parameters, default_axis_parameters)
+    extra_body_parameters = augment_params(
+        extra_body_parameters, default_body_parameters)
+
+
+    # get the code, passing extra_axis_parameters
     code = tpl.get_tikz_code(
         filepath=filepath,  # need this for storing, e.g., png files
         *args, **kwargs, extra_axis_parameters=extra_axis_parameters,
     )
 
-    # tack some extra code before anything
+    # tack on code before anything else
     if pre_tikzpicture_lines is not None:
         code = '%\n'.join(pre_tikzpicture_lines) + '%\n' + code
 
-    # perhaps tack some extra code before the \end{axis} command
+    # tack on code before axis is closed
     if extra_body_parameters is not None:
         end_axis = '\\end{axis}'
         code_pieces = code.split(end_axis)
@@ -91,5 +115,14 @@ def tpl_save(
     file_handle.close()
 
 
-def augment_params_set(passed, defaults):
-    return defaults if passed is None else passed | defaults
+def augment_params(passed, defaults):
+    if type(passed) is set:
+        return passed | defaults
+    elif passed is None:
+        return defaults
+    elif type(passed) is list:
+        return list(defaults) + passed
+    else:
+        raise TypeError('Expected list, set, or None')
+
+    #return defaults if passed is None else passed | defaults

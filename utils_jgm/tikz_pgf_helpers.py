@@ -37,8 +37,8 @@ def tpl_save(
     # To allow the boolean to shut these params off, even if they had been
     #  explicitly set to values, use post/.append style
     for boolean, axis_param in zip(
-        ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS'],
-        ['xticklabels', 'xlabel', 'yticklabels', 'ylabel']
+        ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS', 'CLEANTITLE'],
+        ['xticklabels', 'xlabel', 'yticklabels', 'ylabel', 'title']
     ):
         standard_pre_tikzpicture_lines |= {
             '\\provideboolean{%s}'

@@ -63,6 +63,7 @@ def tpl_save(
 
     # get the code
     code = tpl.get_tikz_code(
+        filepath=filepath,  # need this for storing, e.g., png files
         *args, **kwargs, extra_axis_parameters=extra_axis_parameters,
     )
 

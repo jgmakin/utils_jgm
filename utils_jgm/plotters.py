@@ -15,8 +15,6 @@ from utils_jgm.toolbox import auto_attribute
 from utils_jgm import tau
 
 
-
-
 class NormalizingFlowWidgetizer(Widgetizer):
     def __init__(self):
         self.independent_sliders = {
@@ -130,9 +128,6 @@ def planar_flow(
     return figures, plots_dict, {}
 
 
-
-
-
 class EulersWidgetizer(Widgetizer):
     def __init__(self):
         
@@ -244,7 +239,6 @@ def rotating_complex_exponentials(
     else:
         figures = []
      
-    
     f1 = lambda t: np.exp(1j*(omega*t + phi))
     f2 = lambda t: np.exp(-1j*(omega*t + phi))
     f3 = lambda t: np.cos(omega*t + phi)
@@ -260,11 +254,6 @@ def rotating_complex_exponentials(
     plots_dict['average'].y = np.zeros(N)
     
     return figures, plots_dict, {}
-
-
-
-
-
 
 
 class RLC_circuit():
@@ -283,7 +272,7 @@ class RLC_circuit():
         if self.PARALLEL:
             return 1/(self.R*self.C)
         else:
-            return self.R/self.C
+            return self.R/self.L
         
     @property
     def quality_factor(self):
@@ -308,7 +297,7 @@ class RLC_circuit():
     def temporal_response(self, x0=0, xdot0=0, t_max=0.2):
         legend_str = []
         
-        t = np.linspace(0,t_max,10000)
+        t = np.linspace(0, t_max, 10000)
         
         s1, s2 = self.poles
         if s1 == s2:
@@ -695,11 +684,6 @@ def RLC_plotter(
     #####
 
     return figures, plots_dict, slider_updates
-
-
-
-
-
 
 
 class ConvolutionWidgetizer(Widgetizer):

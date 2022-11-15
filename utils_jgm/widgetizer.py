@@ -96,7 +96,8 @@ class Widgetizer():
             # flex='0 1 auto',
             height='auto',
             # min_height='4000px',
-            width='auto',
+            # width='auto',
+            width='4000px',
         )
 
         # create buttons for scanning the space

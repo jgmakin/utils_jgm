@@ -48,7 +48,7 @@ def tpl_save(
         }
 
     # booleans for the extra_body_parameters
-    extra_body_booleans = ['LEGEND']
+    extra_body_booleans = ['NOLEGEND']
     extra_body_commands = ['\\legend{}']
     for boolean in extra_body_booleans:
         default_pre_tikzpicture_lines |= {

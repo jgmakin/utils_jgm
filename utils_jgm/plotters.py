@@ -7,7 +7,7 @@ from scipy.stats import multivariate_normal
 from scipy import signal
 import bqplot as bq
 import bqplot.pyplot as bplt
-from ipywidgets import FloatSlider
+from ipywidgets import FloatSlider, IntSlider
 
 # local libraries
 from utils_jgm.widgetizer import Widgetizer
@@ -128,6 +128,420 @@ def planar_flow(
     return figures, plots_dict, {}
 
 
+class MOSFETAmplifierWidgetizer(Widgetizer):
+    def __init__(self):
+        self.independent_sliders = {
+            'vgs_mag': FloatSlider(
+                description='|vgs|', value=3, min=0.1, max=5, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'Q_VGS': FloatSlider(
+                description='Q_VGS', value=0, min=-10, max=10, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'vT': FloatSlider(
+                description='vT', value=0, min=-4, max=4, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'NMOSFET': IntSlider(
+                description='NMOSFET', value=1, min=0, max=1, step=1,
+                readout_format='d', orientation='vertical',
+            ),
+        }
+        super().__init__()
+
+    @staticmethod
+    def local_plotter(**kwargs):
+        return vds_vgs(**kwargs)
+
+
+def vds_vgs(vgs_mag=3, Q_VGS=0, vT=0, NMOSFET=1, plots_dict=None):
+
+    # init
+    NMOSFET = bool(NMOSFET)
+    N = 100
+    k = 1
+    vGS_max = 10
+    vDS_max = 10
+    iD_max = 4
+    Nperiods = 5
+    if not NMOSFET:
+        vGS_max = -vGS_max
+        vDS_max = -vDS_max
+
+    # range of vGS
+    vGS = np.linspace(0, vGS_max, N)
+    vDS, colors = get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET)
+
+    # the quiescent point
+    Q_VGS = np.ones(1)*Q_VGS
+    Q_VDS, _ = get_MOSFET_voltage(Q_VGS, vT, vDS_max, iD_max, k, N, NMOSFET)
+    
+    # the input and output as a function of time
+    t = np.linspace(0, Nperiods*tau, N)
+    vGS_of_t = vgs_mag*np.sin(t) + Q_VGS
+    vDS_of_t, _ = get_MOSFET_voltage(vGS_of_t, vT, vDS_max, iD_max, k, N, NMOSFET)
+
+    # first time in
+    if plots_dict is None:
+        plots_dict = dict().fromkeys(['vDS vs. vGS'])
+        plots_dict = dict().fromkeys(['Q point'])
+        plots_dict = dict().fromkeys(['input'])
+        plots_dict = dict().fromkeys(['output'])
+
+    # ...
+    if all(plot_data is None for plot_data in plots_dict.values()):
+        
+        lin_x = bq.LinearScale()
+        lin_y = bq.LinearScale()
+
+        # plot
+        plots_dict['vDS vs. vGS'] = bq.FlexLine(
+            x=np.zeros(N), y=np.zeros(N),
+            color=colors,
+            scales={
+                "x": lin_x,
+                "y": lin_y,
+                "color": bq.OrdinalColorScale(scheme='Dark2', domain=[0, 1, 2])
+            },
+            stroke_width=4,
+        )
+        plots_dict['Q point'] = bplt.scatter(
+            Q_VGS, Q_VDS, marker='circle',
+            scales={
+                "x": lin_x,
+                "y": lin_y,
+            },
+        )
+
+        ax_x = bplt.Axis(
+            label='v_{GS}', scale=lin_x, grid_lines='solid', tick_format='0.2f'
+        )
+        ax_y = bplt.Axis(
+            label='v_{DS}', scale=lin_y, orientation='vertical',
+            tick_format='0.2f'
+        )
+        fig_amp = bplt.figure(
+            title="MOSFET amplification",
+            axes=[ax_x, ax_y],
+            scales={
+                'x': bq.LinearScale(min=0, max=8),
+                'y': bq.LinearScale(min=0, max=15),
+            },
+            # marks=list(plots_dict.values()),
+            marks=[
+                plots_dict['vDS vs. vGS'],
+                plots_dict['Q point'],
+            ]
+        )
+        fig_amp.layout.width = '600px'
+        # bplt.legend()
+
+        # input and output
+        fig_input = bplt.figure()
+        fig_input.layout.width = '600px'
+        fig_input.layout.height = '300px'
+        plots_dict['input'] = bplt.plot(t, vGS_of_t)
+
+        fig_output = bplt.figure()
+        fig_output.layout.width = '600px'
+        fig_output.layout.height = '300px'
+        plots_dict['output'] = bplt.plot(t, vDS_of_t)
+
+        figures = [fig_amp, fig_input, fig_output]
+    else:
+        figures = []
+
+    plots_dict['vDS vs. vGS'].x = vGS
+    plots_dict['vDS vs. vGS'].y = vDS
+    plots_dict['vDS vs. vGS'].color = colors
+    
+    plots_dict['Q point'].x = Q_VGS
+    plots_dict['Q point'].y = Q_VDS
+
+    plots_dict['input'].y = vGS_of_t
+    plots_dict['output'].y = vDS_of_t
+
+    return figures, plots_dict, {}
+
+
+class MOSFETOutputWidgetizer(Widgetizer):
+    def __init__(self):
+        self.independent_sliders = {
+            'vGS': FloatSlider(
+                description='vGS', value=3, min=-5, max=5, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'vT': FloatSlider(
+                description='vT', value=2, min=-4, max=4, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'NMOSFET': IntSlider(
+                description='NMOSFET', value=1, min=0, max=1, step=1,
+                readout_format='d', orientation='vertical',
+            ),
+        }
+        super().__init__()
+
+    @staticmethod
+    def local_plotter(**kwargs):
+        return id_vds(**kwargs)
+
+
+def id_vds(vGS=0, vT=0, NMOSFET=True, plots_dict=None):
+
+    # init
+    NMOSFET = bool(NMOSFET)
+    N = 100
+    vDS_max = 8
+    k = 1
+
+    # range of vGS
+    if not NMOSFET:
+        vDS_max = -vDS_max
+    vDS = np.linspace(0, vDS_max, N)
+    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+
+    # first time in
+    if plots_dict is None:
+        plots_dict = dict().fromkeys(['output characteristic'])
+
+    # ...
+    if all(plot_data is None for plot_data in plots_dict.values()):
+        
+        lin_x = bq.LinearScale()
+        lin_y = bq.LinearScale()
+
+        # plot
+        plots_dict['output characteristic'] = bq.FlexLine(
+            x=np.zeros(N), y=np.zeros(N),
+            color=colors,
+            scales={
+                "x": lin_x,
+                "y": lin_y,
+                "color": bq.OrdinalColorScale(scheme='Dark2', domain=[0, 1, 2])
+            },
+            stroke_width=4,
+        )
+
+        ax_x = bplt.Axis(
+            label='v_{DS}', scale=lin_x, grid_lines='solid', tick_format='0.2f'
+        )
+        ax_y = bplt.Axis(
+            label='i_D', scale=lin_y, orientation='vertical',
+            tick_format='0.2f'
+        )
+        fig = bplt.figure(
+            title="Output characteristic",
+            axes=[ax_x, ax_y],
+            scales={
+                'x': bq.LinearScale(min=0, max=8),
+                'y': bq.LinearScale(min=0, max=15),
+            },
+            marks=list(plots_dict.values()),
+        )
+        fig.layout.width = '600px'
+        # bplt.legend()
+        figures = [fig]
+    else:
+        figures = []
+
+    plots_dict['output characteristic'].x = vDS
+    plots_dict['output characteristic'].y = iD
+    plots_dict['output characteristic'].color = colors
+
+    return figures, plots_dict, {}
+
+
+class MOSFETTransferWidgetizer(Widgetizer):
+    def __init__(self):
+        self.independent_sliders = {
+            'vDS': FloatSlider(
+                description='vDS', value=0, min=-10, max=10, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'vT': FloatSlider(
+                description='vT', value=2, min=-4, max=4, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'NMOSFET': IntSlider(
+                description='NMOSFET', value=1, min=0, max=1, step=1,
+                readout_format='d', orientation='vertical',
+            ),
+        }
+        super().__init__()
+
+    @staticmethod
+    def local_plotter(**kwargs):
+        return id_vgs(**kwargs)
+
+
+def id_vgs(vDS=0, vT=0, NMOSFET=True, plots_dict=None):
+
+    # init
+    NMOSFET = bool(NMOSFET)
+    N = 100
+    vGS_mag_max = 3
+    k = 1
+
+    # range of vGS
+    vGS = np.linspace(-vGS_mag_max, vGS_mag_max, N)
+    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+
+    # you require vDS >= 0 for NMOS and vDS <= 0 for PMOS
+    if (vDS < 0) == NMOSFET:
+        iD = np.nan*iD  # or nan??
+
+    # first time in
+    if plots_dict is None:
+        plots_dict = dict().fromkeys(['transfer characteristic', 'zero volts'])
+
+    # ...
+    if all(plot_data is None for plot_data in plots_dict.values()):
+        
+        lin_x = bq.LinearScale()
+        lin_y = bq.LinearScale()
+
+        # plot
+        plots_dict['zero volts'] = bq.Lines(
+            x=np.zeros(N), y=np.linspace(0, max(iD), N), colors=['black'],
+            opacities=[0.5],
+            line_style='dashed',
+            scales={
+                "x": lin_x,
+                "y": lin_y,
+            },
+        )
+        plots_dict['transfer characteristic'] = bq.FlexLine(
+            x=np.zeros(N), y=np.zeros(N),
+            color=colors,
+            scales={
+                "x": lin_x,
+                "y": lin_y,
+                "color": bq.OrdinalColorScale(scheme='Dark2', domain=[0, 1, 2])
+            },
+            stroke_width=4,
+        )
+
+        ax_x = bplt.Axis(
+            label='v_{GS}', scale=lin_x, grid_lines='solid', tick_format='0.2f'
+        )
+        ax_y = bplt.Axis(
+            label='i_D', scale=lin_y, orientation='vertical',
+            tick_format='0.2f'
+        )
+        fig = bplt.figure(
+            title="Transfer characteristic",
+            axes=[ax_x, ax_y],
+            scales={
+                'x': bq.LinearScale(min=-5, max=5),
+                'y': bq.LinearScale(min=0, max=10),
+            },
+            marks=list(plots_dict.values()),
+        )
+        # bplt.legend()
+        fig.layout.width = '600px'
+        figures = [fig]
+    else:
+        figures = []
+
+    plots_dict['transfer characteristic'].x = vGS
+    plots_dict['transfer characteristic'].y = iD
+    plots_dict['transfer characteristic'].color = colors
+
+    plots_dict['zero volts'].y = np.linspace(0, max(iD), N)
+
+    return figures, plots_dict, {}
+
+
+def get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET):
+
+    # useful variable
+    vDSS = vGS - vT
+
+    # The load line imposes an extra constraint,
+    #   iD = iD_max*(1 - vDS/vDS_max),
+    # which we can use to fix vDS once vGS has been fixed:
+    #   
+    # CUT-OFF:
+    #   iD = 0 = iD_max*(1 - vDS/vDS_max) => vDS = vDS_max
+    vDS_cutoff = vDS_max + 0*vGS
+    #
+    # TRIODE
+    #   iD = k*(vDSS*vDS - vDS^2/2) = iD_max*(1 - vDS/vDS_max),
+    #   => (k/2)*vDS^2 - (k*vDSS + iD_max/vDS_max)*vDS + iD_max = 0
+    #   => vDS = (k*vDSS + iD_max/vDS_max)/k
+    #          +/- sqrt{(k*vDSS + iD_max/vDS_max)^2 - 2*k*iD_max}/k
+    #          = [vDSS + iD_max/(k*vDS_max)]
+    #          +/- sqrt{[vDSS + iD_max/(k*vDS_max)]^2 - 2*iD_max/k}
+    b = (vDSS + iD_max/(k*vDS_max))
+    if NMOSFET:
+        vDS_triode = b - (b**2 - 2*iD_max/k)**(1/2)
+    else:
+        vDS_triode = b + (b**2 - 2*iD_max/k)**(1/2)
+    # (Computing this for all vGS can yield negative discriminants:
+    vDS_triode[np.isnan(vDS_triode)] = 0
+    #
+    # SATURATION
+    #   iD = k/2*vDSS^2 = iD_max*(1 - vDS/vDS_max)
+    #   => vDS = (1 - k/2*vDSS**2/iD_max)*vDS_max
+    vDS_sat = (1 - k/2*vDSS**2/iD_max)*vDS_max
+
+    # booleans
+    CUTOFF = np.array(vDSS < 0)
+    SATURATION = np.array(vDS_sat > vDSS)
+
+    if not NMOSFET:
+        CUTOFF = ~CUTOFF
+        SATURATION = ~SATURATION
+
+    # put all the voltages together into one array
+    vDS = CUTOFF*vDS_cutoff + (~CUTOFF)*((~SATURATION)*vDS_triode + SATURATION*vDS_sat)
+
+    # colors for the different regimes
+    colors = get_MOSFET_colors(CUTOFF, SATURATION, N)
+
+    return vDS, colors
+
+
+def get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET):
+
+    # useful variable
+    vDSS = vGS - vT
+
+    # booleans
+    CUTOFF = np.array(vDSS < 0)
+    SATURATION = np.array(vDS >= vDSS)
+
+    if not NMOSFET:
+        CUTOFF = ~CUTOFF
+        SATURATION = ~SATURATION
+
+    # current in different regimes
+    iD_cutoff = 0*vGS
+    iD_triode = k*(vDSS*vDS - vDS**2/2)
+    iD_sat = k/2*vDSS**2
+
+    # pdb.set_trace()
+
+    # put all the currents together into one array
+    iD = CUTOFF*iD_cutoff + (~CUTOFF)*((~SATURATION)*iD_triode + SATURATION*iD_sat)
+
+    # colors for the different regimes
+    colors = get_MOSFET_colors(CUTOFF, SATURATION, N)
+    
+    return iD, colors
+
+
+def get_MOSFET_colors(CUTOFF, SATURATION, N):
+    # might not need N....
+    return (
+        CUTOFF*np.ones(N)*1 + ~CUTOFF*(
+            ~SATURATION*np.ones(N)*2 + SATURATION*np.ones(N)*0
+        )
+    )
+
+
 class EulersWidgetizer(Widgetizer):
     def __init__(self):
         
@@ -155,7 +569,7 @@ class EulersWidgetizer(Widgetizer):
 
 
 def rotating_complex_exponentials(
-    omega=0.1, phi=0, t=0, plots_dict=None,
+    vDS=1, omega=0.1, phi=0, t=0, plots_dict=None,
 ):
 
     # ...
@@ -188,7 +602,7 @@ def rotating_complex_exponentials(
             display_legend=True,
         )
         plots_dict['counterclockwise'] = bq.FlexLine(
-            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0,1,N),
+            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0, 1, N),
             scales={
                 "x": lin_x,
                 "y": lin_y,
@@ -199,7 +613,7 @@ def rotating_complex_exponentials(
             display_legend=True,
         )
         plots_dict['clockwise'] = bq.FlexLine(
-            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0,1,N),
+            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0, 1, N),
             scales={
                 "x": lin_x,
                 "y": lin_y,
@@ -210,7 +624,7 @@ def rotating_complex_exponentials(
             display_legend=True,
         )
         plots_dict['average'] = bq.FlexLine(
-            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0,1,N),
+            x=np.zeros(N), y=np.zeros(N), color=np.linspace(0, 1, N),
             scales={
                 "x": lin_x,
                 "y": lin_y,
@@ -244,13 +658,13 @@ def rotating_complex_exponentials(
     f3 = lambda t: np.cos(omega*t + phi)
 
     # just change the values on
-    plots_dict['counterclockwise'].x = np.real(f1(np.linspace(t0,t,N)))
-    plots_dict['counterclockwise'].y = np.imag(f1(np.linspace(t0,t,N)))
+    plots_dict['counterclockwise'].x = np.real(f1(np.linspace(t0, t, N)))
+    plots_dict['counterclockwise'].y = np.imag(f1(np.linspace(t0, t, N)))
 
-    plots_dict['clockwise'].x = np.real(f2(np.linspace(t0,t,N)))
-    plots_dict['clockwise'].y = np.imag(f2(np.linspace(t0,t,N)))
+    plots_dict['clockwise'].x = np.real(f2(np.linspace(t0, t, N)))
+    plots_dict['clockwise'].y = np.imag(f2(np.linspace(t0, t, N)))
     
-    plots_dict['average'].x = np.real(f3(np.linspace(t0,t,N)))
+    plots_dict['average'].x = np.real(f3(np.linspace(t0, t, N)))
     plots_dict['average'].y = np.zeros(N)
     
     return figures, plots_dict, {}

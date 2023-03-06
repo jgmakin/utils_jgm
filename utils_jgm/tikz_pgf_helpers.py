@@ -17,21 +17,22 @@ def tpl_save(
     #####
     # non-tpl kwargs
     encoding=None,
-    pre_tikzpicture_lines=None,
     extra_body_parameters=None,
+    extra_groupstyle_parameters=None,
     #####
     #####
-    # this kwarg has a non-empty default (set below)
+    # these kwargs have non-empty defaults (set below)
     extra_axis_parameters=None,
+    extra_lines_start=None,
     #####
     **kwargs
 ):
 
     # (1) STANDARD PRE-TIKZPICTURE LINES (before everything)
-    default_pre_tikzpicture_lines = {
-        '\\providecommand{\\thisXlabelopacity}{1.0}',
-        '\\providecommand{\\thisYlabelopacity}{1.0}',
-        '\\pgfplotsset{compat=1.15}',
+    default_extra_lines_start = {
+        '\\providecommand{\\thisXlabelopacity}{1.0}%',
+        '\\providecommand{\\thisYlabelopacity}{1.0}%',
+        '\\pgfplotsset{compat=1.15}%',
     }
 
     # To allow the boolean to shut these params off, even if they had been
@@ -40,7 +41,7 @@ def tpl_save(
         ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS', 'CLEANTITLE'],
         ['xticklabels', 'xlabel', 'yticklabels', 'ylabel', 'title']
     ):
-        default_pre_tikzpicture_lines |= {
+        default_extra_lines_start |= {
             '\\provideboolean{%s}'
             '\\ifthenelse{\\boolean{%s}}{%%'
             '\n\t\\pgfplotsset{every axis post/.append style={%s = {} }}%%'
@@ -51,7 +52,7 @@ def tpl_save(
     extra_body_booleans = ['NOLEGEND']
     extra_body_commands = ['\\legend{}']
     for boolean in extra_body_booleans:
-        default_pre_tikzpicture_lines |= {
+        default_extra_lines_start |= {
             '\\provideboolean{%s}%%' % (boolean)
         }
 
@@ -69,41 +70,41 @@ def tpl_save(
             '\\ifthenelse{\\boolean{%s}}{%s}{}' % (boolean, command)
         }
 
-
     # now add in the extra content provided by the user as args
     # for lines, default_lines in zip(
-    #     [pre_tikzpicture_lines, extra_axis_parameters, extra_body_parameters],
-    #     [default_pre_tikzpicture_lines, default_axis_parameters,
+    #     [extra_lines_start, extra_axis_parameters, extra_body_parameters],
+    #     [default_extra_lines_start, default_axis_parameters,
     #      default_body_parameters]
     # ):
     #     lines = augment_params_set(lines, default_lines)
-    pre_tikzpicture_lines = augment_params(
-        pre_tikzpicture_lines, default_pre_tikzpicture_lines)
+    extra_lines_start = augment_params(
+        extra_lines_start, default_extra_lines_start)
     extra_axis_parameters = augment_params(
         extra_axis_parameters, default_axis_parameters)
     extra_body_parameters = augment_params(
         extra_body_parameters, default_body_parameters)
 
-
     # get the code, passing extra_axis_parameters
     code = tpl.get_tikz_code(
         filepath=filepath,  # need this for storing, e.g., png files
-        *args, **kwargs, extra_axis_parameters=extra_axis_parameters,
+        *args, **kwargs,
+        extra_axis_parameters=extra_axis_parameters,
+        extra_groupstyle_parameters=extra_groupstyle_parameters,
+        extra_lines_start=extra_lines_start,
     )
-
-    # tack on code before anything else
-    if pre_tikzpicture_lines is not None:
-        code = '%\n'.join(pre_tikzpicture_lines) + '%\n' + code
 
     # tack on code before axis is closed
     if extra_body_parameters is not None:
         end_axis = '\\end{axis}'
         code_pieces = code.split(end_axis)
-        code = (
-            code_pieces[0] +
-            reduce(lambda a, b: b+'\n'+a, reversed(extra_body_parameters), end_axis) +
-            code_pieces[1]
-        )
+        if len(code_pieces) > 1:
+            code = (
+                code_pieces[0] +
+                reduce(lambda a, b: b+'\n'+a, reversed(extra_body_parameters), end_axis) +
+                code_pieces[1]
+            )
+        else:
+            print('uh oh: skipping extra_body_parameters')
 
     # finally, write out the file
     file_handle = codecs.open(filepath, "w", encoding)

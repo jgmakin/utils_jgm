@@ -128,6 +128,76 @@ def planar_flow(
     return figures, plots_dict, {}
 
 
+class FunctionWidgetizer(Widgetizer):
+    def __init__(self):
+        self.independent_sliders = {
+            'a': FloatSlider(
+                description='a', value=0, min=-5, max=5, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'b': FloatSlider(
+                description='b', value=0, min=-500, max=500, step=10,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'c': FloatSlider(
+                description='c', value=1, min=-5, max=5, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'd': FloatSlider(
+                description='d', value=1, min=-5, max=5, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+        }
+        super().__init__()
+
+    @staticmethod
+    def local_plotter(**kwargs):
+        return cubic_monomial(**kwargs)
+
+
+def cubic_monomial(a=0, b=0, c=1, d=1, plots_dict=None):
+
+    # init
+    N = 1000
+    t_min = -10
+    t_max = 10
+    t = np.linspace(t_min, t_max, N)
+
+    def yr_func(aa, bb, cc, dd, tt):
+        return dd*(cc*tt + aa)**3 + bb
+        # return dd*(cc*tt + aa)**3 + bb
+
+    x = yr_func(a, b, c, d, t)
+    x_min = yr_func(0, 0, 1, 1, t_min)
+    x_max = yr_func(0, 0, 1, 1, t_max)
+
+    # first time in
+    if plots_dict is None:
+        plots_dict = dict().fromkeys(['cubic monomial'])
+
+    # ...
+    if all(plot_data is None for plot_data in plots_dict.values()):
+        fig = bplt.figure(
+            title="f(t) = d(ct + a)^3 + b",
+            scales={
+                'x': bq.LinearScale(min=t_min, max=t_max),
+                'y': bq.LinearScale(min=x_min, max=x_max),
+            },
+        )
+        plots_dict['cubic monomial'] = bplt.plot(t, x, 'm', stroke_width=3)
+        
+        # fig.layout.width = '600px'
+        # bplt.legend()
+        figures = [fig]
+    else:
+        figures = []
+
+    plots_dict['cubic monomial'].x = t
+    plots_dict['cubic monomial'].y = x
+
+    return figures, plots_dict, {}
+
+
 class MOSFETAmplifierWidgetizer(Widgetizer):
     def __init__(self):
         self.independent_sliders = {
@@ -155,16 +225,24 @@ class MOSFETAmplifierWidgetizer(Widgetizer):
         return vds_vgs(**kwargs)
 
 
-def vds_vgs(vgs_mag=3, Q_VGS=0, vT=0, NMOSFET=1, plots_dict=None):
+def vds_vgs(
+    vgs_mag=3, Q_VGS=None, vT=0, NMOSFET=1, Rd=0.5, Rss=0.5, R1=500, R2=500,
+    plots_dict=None
+):
 
     # init
     NMOSFET = bool(NMOSFET)
-    N = 100
-    k = 1
+    N = 1000
+    k = 2
     vGS_max = 10
-    vDS_max = 10
-    iD_max = 4
+    vPlus = 5
+    vMinus = -5
     Nperiods = 5
+
+    # ...
+    vDS_max = vPlus - vMinus
+    iD_max = vDS_max/(Rd + Rss)
+
     if not NMOSFET:
         vGS_max = -vGS_max
         vDS_max = -vDS_max
@@ -172,6 +250,17 @@ def vds_vgs(vgs_mag=3, Q_VGS=0, vT=0, NMOSFET=1, plots_dict=None):
     # range of vGS
     vGS = np.linspace(0, vGS_max, N)
     vDS, colors = get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET)
+
+    # ... 
+    if Q_VGS is None:
+        # compute all possible values of vG
+        iD, _ = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+        vS = vMinus + iD*Rss if NMOSFET else vPlus - iD*Rss
+        vG = vS + vGS
+
+        # find the one closest to that given by the gate-side resistors
+        vG_actual = R2/(R1+R2)*vDS_max + vMinus
+        Q_VGS = vGS[np.argmin(abs(vG_actual - vG))]
 
     # the quiescent point
     Q_VGS = np.ones(1)*Q_VGS
@@ -265,6 +354,44 @@ def vds_vgs(vgs_mag=3, Q_VGS=0, vT=0, NMOSFET=1, plots_dict=None):
     return figures, plots_dict, {}
 
 
+class MOSFETBiasCircuit(Widgetizer):
+    def __init__(self):
+        self.independent_sliders = {
+            'R1': FloatSlider(
+                description='R1', value=500, min=500, max=5000, step=10,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'R2': FloatSlider(
+                description='R2', value=500, min=500, max=5000, step=10,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'Rd': FloatSlider(
+                description='Rd', value=0.5, min=0.5, max=100, step=0.5,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'Rss': FloatSlider(
+                description='Rss', value=0.5, min=0.5, max=100, step=0.5,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'vT': FloatSlider(
+                description='vT', value=0, min=-4, max=4, step=0.1,
+                readout_format='.2e', orientation='vertical',
+            ),
+            'NMOSFET': IntSlider(
+                description='NMOSFET', value=1, min=0, max=1, step=1,
+                readout_format='d', orientation='vertical',
+            ),
+        }
+        super().__init__()
+
+    @staticmethod
+    def local_plotter(**kwargs):
+        figures, plots_dict, _ = vds_vgs(**kwargs)
+        plots_dict.pop('input')
+        plots_dict.pop('output')
+        return figures[0:1], plots_dict, {}
+
+
 class MOSFETOutputWidgetizer(Widgetizer):
     def __init__(self):
         self.independent_sliders = {
@@ -292,9 +419,9 @@ def id_vds(vGS=0, vT=0, NMOSFET=True, plots_dict=None):
 
     # init
     NMOSFET = bool(NMOSFET)
-    N = 100
-    vDS_max = 8
-    k = 1
+    N = 1000
+    vDS_max = 10
+    k = 2
 
     # range of vGS
     if not NMOSFET:
@@ -380,9 +507,9 @@ def id_vgs(vDS=0, vT=0, NMOSFET=True, plots_dict=None):
 
     # init
     NMOSFET = bool(NMOSFET)
-    N = 100
+    N = 1000
     vGS_mag_max = 3
-    k = 1
+    k = 2
 
     # range of vGS
     vGS = np.linspace(-vGS_mag_max, vGS_mag_max, N)
@@ -461,12 +588,12 @@ def get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET):
 
     # The load line imposes an extra constraint,
     #   iD = iD_max*(1 - vDS/vDS_max),
-    # which we can use to fix vDS once vGS has been fixed:
-    #   
+    # which we can use to fix vDS once vGS has been fixed
+    
     # CUT-OFF:
     #   iD = 0 = iD_max*(1 - vDS/vDS_max) => vDS = vDS_max
     vDS_cutoff = vDS_max + 0*vGS
-    #
+    
     # TRIODE
     #   iD = k*(vDSS*vDS - vDS^2/2) = iD_max*(1 - vDS/vDS_max),
     #   => (k/2)*vDS^2 - (k*vDSS + iD_max/vDS_max)*vDS + iD_max = 0
@@ -475,13 +602,15 @@ def get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET):
     #          = [vDSS + iD_max/(k*vDS_max)]
     #          +/- sqrt{[vDSS + iD_max/(k*vDS_max)]^2 - 2*iD_max/k}
     b = (vDSS + iD_max/(k*vDS_max))
+    d = b**2 - 2*iD_max/k
+    # Because we are computing this for *all* vGS, we can get negative
+    #  discriminants; zero these to avoid errors:
+    d[d < 0] = 0
     if NMOSFET:
-        vDS_triode = b - (b**2 - 2*iD_max/k)**(1/2)
+        vDS_triode = b - d**(1/2)
     else:
-        vDS_triode = b + (b**2 - 2*iD_max/k)**(1/2)
-    # (Computing this for all vGS can yield negative discriminants:
-    vDS_triode[np.isnan(vDS_triode)] = 0
-    #
+        vDS_triode = b + d**(1/2)
+    
     # SATURATION
     #   iD = k/2*vDSS^2 = iD_max*(1 - vDS/vDS_max)
     #   => vDS = (1 - k/2*vDSS**2/iD_max)*vDS_max
@@ -708,10 +837,10 @@ class RLC_circuit():
         w2 = -gg - self.bandwidth/2
         return [w1, w2]
 
-    def temporal_response(self, x0=0, xdot0=0, t_max=0.2):
+    def temporal_response(self, x0=0, xdot0=0, t_max=0.2, T=10000):
         legend_str = []
         
-        t = np.linspace(0, t_max, 10000)
+        t = np.linspace(0, t_max, T)
         
         s1, s2 = self.poles
         if s1 == s2:
@@ -930,7 +1059,7 @@ def get_circle_data(w0):
 
 
 #########
-circuit = RLC_circuit(1, 1, 1)
+circuit = RLC_circuit(1, 1, 1, PARALLEL=True)
 frequencies = np.logspace(-3, 7, 1000)
 t_max = 0.2
 zeros = [0]

@@ -16,11 +16,6 @@ import matplotlib.pyplot as plt
 import scipy.signal as signal
 from scipy.stats.mstats import zscore
 try:
-    import tfmpl
-except ModuleNotFoundError:
-    print('Package conflict (probably because you are using TF2.x)', end='')
-    print('...not loading tfmpl...')
-try:
     import samplerate
 except:  ### ModuleNotFoundError:
     print("Warning: package 'samplerate' not found; skipping")
@@ -136,7 +131,8 @@ def _assign_args(
 
     def assign_keyword_defaults(parameters, defaults):
         for parameter, default_arg in zip(
-                reversed(parameters), reversed(defaults)):
+            reversed(parameters), reversed(defaults)
+        ):
             set_attribute(instance, parameter, default_arg)
 
     def assign_positional_args(parameters, args):
@@ -282,10 +278,10 @@ def rescale(X, xmin, xmax, zmin, zmax):
     '''
 
     # vectorize
-    xmin = np.array(xmin)[None, :]
-    zmin = np.array(zmin)[None, :]
-    xmax = np.array(xmax)[None, :]
-    zmax = np.array(zmax)[None, :]
+    xmin = np.reshape(xmin, [1, -1])
+    zmin = np.reshape(zmin, [1, -1])
+    xmax = np.reshape(xmax, [1, -1])
+    zmax = np.reshape(zmax, [1, -1])
 
     # lots of implicit expansion
     column_scaling = (zmax - zmin)/(xmax - xmin)
@@ -330,6 +326,8 @@ def close_factors(n, num_factors):
 # ...
 def draw_confusion_matrix(matrix, axis_labels, figsize):
     '''Draw confusion matrix for MNIST.'''
+    import tfmpl
+    
     fig = tfmpl.create_figure(figsize=figsize)
     ax = fig.add_subplot(111)
     ax.set_title('Confusion matrix')

@@ -118,9 +118,9 @@ class Widgetizer():
         ])
 
         # put figure together with sliders
-        final_layout = HBox(
+        final_layout = VBox(
             [
-                VBox(self.figures),
+                HBox(self.figures),
                 VBox([slider_layout], layout=Layout(
                     # flex='0 1 auto',
                     height='auto',

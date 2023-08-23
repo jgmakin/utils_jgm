@@ -171,14 +171,14 @@ def natural_keys(text):
 # https://stackoverflow.com/questions/11517986/
 def barplot_annotate_brackets(
     num1, num2, data, center, extrema, yerr=None, dh=.05, barh=.05, fs=None,
-    max_asterisk=None, ABOVE=True
+    max_asterisk=None, ABOVE=True, axis=None
 ):
     """
     Annotate barplot with p-values.
 
     :param num1: number of left bar to put bracket over
     :param num2: number of right bar to put bracket over
-    :param data: string to write or number for generating asterixes
+    :param data: string to write or number for generating asterisks
     :param center: x coords of all bars/boxes (like plt.bar() input)
     :param extrema: heights or depths of all bars/boxes (like plt.bar() input)
     :param yerr: yerrs of all bars (like plt.bar() input)
@@ -190,6 +190,9 @@ def barplot_annotate_brackets(
     :param ABOVE: whether to place bracket above or below the bars/boxes.  NB
         that when using this option, the extrema should be set to *depths*.
     """
+
+    if axis is None:
+        axis = plt.gca()
 
     if type(data) is str:
         text = data
@@ -214,7 +217,7 @@ def barplot_annotate_brackets(
     lx, ly = center[num1], extrema[num1]
     rx, ry = center[num2], extrema[num2]
 
-    ax_y0, ax_y1 = plt.gca().get_ylim()
+    ax_y0, ax_y1 = axis.get_ylim()
     dh *= (ax_y1 - ax_y0)
     barh *= (ax_y1 - ax_y0)
 
@@ -225,6 +228,7 @@ def barplot_annotate_brackets(
             ry += yerr[num2]
         y = max(ly, ry) + dh
         y_bracket = y + barh
+        va = 'bottom'
     else:
         # put the bracket underneath
         if yerr:
@@ -232,18 +236,18 @@ def barplot_annotate_brackets(
             ry -= yerr[num2]
         y = min(ly, ry) - dh
         y_bracket = y - barh
+        va = 'top'
 
     barx = [lx, lx, rx, rx]
     bary = [y, y_bracket, y_bracket, y]
     mid = ((lx+rx)/2, y_bracket)
+    axis.plot(barx, bary, c='black')
 
-    plt.plot(barx, bary, c='black')
-
-    kwargs = dict(ha='center', va='bottom')
+    kwargs = dict(ha='center', va=va)
     if fs is not None:
         kwargs['fontsize'] = fs
 
-    plt.text(*mid, text, **kwargs)
+    axis.text(*mid, text, **kwargs)
 
 
 def cosine_similarity(X, Y=None):

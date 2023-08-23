@@ -30,9 +30,11 @@ def tpl_save(
 
     # (1) STANDARD PRE-TIKZPICTURE LINES (before everything)
     default_extra_lines_start = {
+        '\\pgfplotsset{compat=1.15}%',
+        '\\providecommand{\\figwidth}{360pt}%',
+        '\\providecommand{\\figheight}{310pt}%',
         '\\providecommand{\\thisXlabelopacity}{1.0}%',
         '\\providecommand{\\thisYlabelopacity}{1.0}%',
-        '\\pgfplotsset{compat=1.15}%',
     }
 
     # To allow the boolean to shut these params off, even if they had been
@@ -58,6 +60,8 @@ def tpl_save(
 
     # (2) STANDARD AXIS PARAMETERS (passed to \begin{axis})
     default_axis_parameters = {
+        'width=\\figwidth',
+        'height=\\figheight',
         'every axis x label/.append style={opacity=\\thisXlabelopacity}',
         'every axis y label/.append style={opacity=\\thisYlabelopacity}',
     }

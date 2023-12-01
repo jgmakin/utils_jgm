@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="utils_jgm",
-    version="0.6.0",
+    version="0.7.0",
     author="J.G. Makin",
     author_email="jgmakin@gmail.com",
     description="general python utilities",
@@ -25,6 +25,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'tfmpl', 'numpy', 'matplotlib', 'scipy', 'samplerate'
+        'numpy', 'matplotlib', 'scipy', 'samplerate', 'ipywidgets', 'tikzplotlib',
+        # 'bqplot'
     ],
 )

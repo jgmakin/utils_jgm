@@ -40,8 +40,14 @@ def tpl_save(
     # To allow the boolean to shut these params off, even if they had been
     #  explicitly set to values, use post/.append style
     for boolean, axis_param in zip(
-        ['CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS', 'CLEANTITLE'],
-        ['xticklabels', 'xlabel', 'yticklabels', 'ylabel', 'title']
+        [
+            'CLEANXAXIS', 'CLEANXAXIS', 'CLEANYAXIS', 'CLEANYAXIS',
+            'CLEANTITLE', 'CLEARXLABEL', 'CLEARYLABEL',
+        ],
+        [
+            'xticklabels', 'xlabel', 'yticklabels', 'ylabel',
+            'title', 'xlabel', 'ylabel'
+        ]
     ):
         default_extra_lines_start |= {
             '\\provideboolean{%s}'
@@ -131,3 +137,14 @@ def augment_params(passed, defaults):
         raise TypeError('Expected list, set, or None')
 
     #return defaults if passed is None else passed | defaults
+
+
+# https://github.com/nschloe/tikzplotlib/issues/557
+def tikzplotlib_fix_ncols(obj):
+    """
+    workaround for matplotlib 3.6 renamed legend's _ncol to _ncols, which breaks tikzplotlib
+    """
+    if hasattr(obj, "_ncols"):
+        obj._ncol = obj._ncols
+    for child in obj.get_children():
+        tikzplotlib_fix_ncols(child)

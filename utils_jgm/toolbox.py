@@ -13,7 +13,9 @@ from IPython import display
 # third-party packages
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import scipy.signal as signal
+from scipy.stats import chi2
 from scipy.stats.mstats import zscore
 try:
     import samplerate
@@ -331,7 +333,7 @@ def close_factors(n, num_factors):
 def draw_confusion_matrix(matrix, axis_labels, figsize):
     '''Draw confusion matrix for MNIST.'''
     import tfmpl
-    
+
     fig = tfmpl.create_figure(figsize=figsize)
     ax = fig.add_subplot(111)
     ax.set_title('Confusion matrix')
@@ -494,8 +496,9 @@ def wer_vector(
         def cost_fxn(ref, hyp):
             return m_cost, s_cost, i_cost, d_cost
 
-        distance_tensor = np.zeros((N_sentences, N_ref_max + 1, N_hyp_max + 1),
-                                   dtype=np.uint8)
+        distance_tensor = np.zeros(
+            (N_sentences, N_ref_max + 1, N_hyp_max + 1), dtype=np.uint8
+        )
         distance_tensor[:, 0] = np.indices((N_hyp_max + 1, ))
         distance_tensor[:, :, 0] = np.indices((N_ref_max + 1, ))
     else:
@@ -516,8 +519,9 @@ def wer_vector(
             distance_tensor[:, i_ref+1, i_hyp+1] = np.minimum.reduce(
                 [match, substitution, insertion, deletion])
 
-    distances = distance_tensor[(np.arange(N_sentences),
-                                 reference_lengths, hypothesis_lengths)]
+    distances = distance_tensor[
+        (np.arange(N_sentences), reference_lengths, hypothesis_lengths)
+    ]
     return distances/reference_lengths
 
 
@@ -688,6 +692,41 @@ def wer_two(ref, hyp, debug=False):
     wer_result = round((numSub + numDel + numIns) / (float)(len(r)), 3)
     return {'WER': wer_result, 'Cor': numCor, 'Sub': numSub,
             'Ins': numIns, 'Del': numDel}
+
+
+def r_pearson(X, Y, MATRIX=True):
+    '''
+    X : (N_dims x N_samples)
+    Y : (N_dims x N_samples)
+
+    But it will accept inputs of size (N_samples) for 1D data.
+    '''
+
+    if len(X.shape) == 1:
+        X = X[None, :]
+    if len(Y.shape) == 1:
+        Y = Y[None, :]
+
+    # center
+    Xc = X - X.mean(axis=1, keepdims=True)
+    Yc = Y - Y.mean(axis=1, keepdims=True)
+
+    # get variances (* N_samples)
+    vx = (Xc*Xc).sum(axis=1, keepdims=True)
+    vy = (Yc*Yc).sum(axis=1, keepdims=True)
+
+    if MATRIX:
+        # get cross-covariance matrix (* N_samples)
+        cov = Xc@Yc.T
+
+        # normalize
+        return cov/(vx@vy.T)**(1/2)
+    else:
+        # get individual cross-covariances (* N_samples)
+        cov_xy = (Xc*Yc).sum(axis=1)
+
+        # normalize
+        return cov_xy/(vx*vy)**(1/2)
 
 
 def pseudomode(num_list):
@@ -891,3 +930,55 @@ def time2index(event_times, sampling_rate=None, analog_times=None):
         event_indices[CLOSER_TO_PREVIOUS_INDEX] -= 1
 
         return event_indices
+
+
+# due to GPT
+def plot_cov_ellipse(
+    cov_matrix, mean=None, conf=0.95, ax=None, color='blue', alpha=0.5,
+    label=None
+):
+    """
+    Plot a covariance ellipse for a 2D distribution.
+
+    Parameters:
+    - cov_matrix: The 2x2 covariance matrix.
+    - mean: Mean vector [x, y]. If None, the origin (0, 0) is used.
+    - ax: Matplotlib axis to plot on. If None, the current axis is used.
+    - color: Color of the ellipse.
+    - alpha: Transparency of the ellipse.
+    - label: Label for the ellipse in the legend.
+
+    Returns:
+    - The Matplotlib ellipse patch.
+    """
+
+    if mean is None:
+        mean = [0, 0]  # Default to the origin
+
+    if ax is None:
+        ax = plt.gca()
+
+    # Compute the eigenvalues and eigenvectors of the covariance matrix
+    eigvals, eigvecs = np.linalg.eigh(cov_matrix)
+
+    # Sort eigenvalues and eigenvectors in descending order
+    order = eigvals.argsort()[::-1]
+    eigvals = eigvals[order]
+    eigvecs = eigvecs[:, order]
+
+    # Compute the semi-major and semi-minor axes lengths
+    width, height = 2*np.sqrt(2.0*chi2.ppf(conf, 2)*np.sqrt(eigvals))
+    
+    # Compute the rotation angle of the ellipse
+    angle = np.degrees(np.arctan2(*eigvecs[:, 0][::-1]))
+
+    # Create the ellipse patch
+    ellipse = patches.Ellipse(
+        xy=mean, width=width, height=height, angle=angle,
+        color=color, alpha=alpha, label=label
+    )
+
+    # Add the ellipse to the axis
+    ax.add_patch(ellipse)
+
+    return ellipse

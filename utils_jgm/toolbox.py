@@ -125,7 +125,7 @@ def _assign_args(
         manifest = dict()
 
     def set_attribute(instance, parameter, default_arg):
-        if not(parameter.startswith("_")):
+        if not (parameter.startswith("_")):
             if default_arg is None and parameter in manifest.keys():
                 setattr(instance, parameter, manifest[parameter])
             else:

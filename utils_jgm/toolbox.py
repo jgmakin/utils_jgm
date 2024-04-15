@@ -17,6 +17,7 @@ import matplotlib.patches as patches
 import scipy.signal as signal
 from scipy.stats import chi2
 from scipy.stats.mstats import zscore
+from scipy.special import factorial
 try:
     import samplerate
 except:  ### ModuleNotFoundError:
@@ -696,10 +697,21 @@ def wer_two(ref, hyp, debug=False):
 
 def r_pearson(X, Y, MATRIX=True):
     '''
+    Pearson correlations
+
     X : (N_dims x N_samples)
     Y : (N_dims x N_samples)
 
     But it will accept inputs of size (N_samples) for 1D data.
+
+    Returns:
+        If MATRIX=True (default):
+        Correlation matrix (N_dims x N_dims) for random variable [X; Y]
+
+        otherwise
+        Correlations (N_dims x 1) between random variables X and Y
+        
+    
     '''
 
     if len(X.shape) == 1:
@@ -723,10 +735,28 @@ def r_pearson(X, Y, MATRIX=True):
         return cov/(vx@vy.T)**(1/2)
     else:
         # get individual cross-covariances (* N_samples)
-        cov_xy = (Xc*Yc).sum(axis=1)
+        cov_xy = (Xc*Yc).sum(axis=1, keepdims=True)
 
         # normalize
         return cov_xy/(vx*vy)**(1/2)
+
+
+def Poisson_cross_entropy(data, natural_param):
+    '''
+    Empirical Poisson cross entropy
+
+    data            : (* x N_samples)
+    natural_params  : (* N_samples)
+
+    returns
+
+    cross entropy   : (* x 1)
+    '''
+
+    return np.mean(
+        np.exp(natural_param) - data*natural_param + np.log(factorial(data)),
+        axis=-1, keepdims=1
+    )
 
 
 def pseudomode(num_list):

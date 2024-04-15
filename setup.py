@@ -25,7 +25,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        'numpy', 'matplotlib', 'scipy', 'samplerate', 'ipywidgets', 'tikzplotlib',
+        'numpy',
+        'matplotlib', # ==3.6 because of incompat with tikzplotlib
+        'scipy', 'samplerate', 'ipywidgets', 'tikzplotlib',
         # 'bqplot'
     ],
 )

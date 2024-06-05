@@ -3,6 +3,7 @@ from functools import reduce
 import pdb
 import codecs
 import six
+import time
 
 # third-party packages
 import tikzplotlib as tpl
@@ -115,6 +116,9 @@ def tpl_save(
             )
         else:
             print('uh oh: skipping extra_body_parameters')
+
+    # add today's date to the top of the file
+    code = '% ' + time.ctime() + '\n' + code
 
     # finally, write out the file
     file_handle = codecs.open(filepath, "w", encoding)

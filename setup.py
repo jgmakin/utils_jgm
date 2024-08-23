@@ -27,7 +27,9 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'matplotlib', # ==3.6 because of incompat with tikzplotlib
-        'scipy', 'samplerate', 'ipywidgets', 'tikzplotlib',
+        'scipy',
+        # 'samplerate', causes problems on some machines....
+        'ipywidgets', 'tikzplotlib',
         # 'bqplot'
     ],
 )

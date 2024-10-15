@@ -14,22 +14,17 @@ class Widgetizer():
     ):
         # initialize
         if hasattr(self, 'independent_sliders'):
-            self.figures, self.plots_dict, slider_updates = self.local_plotter(
+            # run once to get outputs (?)
+            self.figures, self.plots_dict = self.local_plotter(
                 **{
                     key: slider.value for key, slider
                     in self.independent_sliders.items()
                 },
             )
 
-            # ...
+            # make each slider update_response whenever it observes changes
             for slider in self.independent_sliders.values():
                 slider.observe(self.update_response, 'value')
-
-            # update the dependent sliders
-            if hasattr(self, 'dependent_sliders'):
-                # update dependent sliders
-                for key, value in slider_updates.items():
-                    self.dependent_sliders[key].value = value
 
         else:
             self.figures = []
@@ -43,16 +38,16 @@ class Widgetizer():
 
     def update_response(self, change):
         # update plots
-        _, _, slider_updates = self.local_plotter(
-            **{key: slider.value for key, slider in self.independent_sliders.items()},
+        self.local_plotter(
+            **{
+                key: slider.value for key, slider
+                in self.independent_sliders.items()
+            },
             plots_dict=self.plots_dict,
         )
         
         time.sleep(0.2)
-        if hasattr(self, 'dependent_sliders'):
-            # update dependent sliders
-            for key, value in slider_updates.items():
-                self.dependent_sliders[key].value = value
+        self.set_slider_values()
 
     def scan_parameter(self, btn, param='b'):
         scan_values = np.arange(
@@ -65,7 +60,7 @@ class Widgetizer():
             # hard-coded figures[0]---seems to work, though
             #############
             with self.figures[0].hold_sync():
-                _, _, slider_updates = self.local_plotter(
+                self.local_plotter(
                     **{
                         # update according to current slider values
                         **{
@@ -82,9 +77,7 @@ class Widgetizer():
                 self.independent_sliders[param].value = scan_value
 
                 # update the dependent sliders
-                if hasattr(self, 'dependent_sliders'):
-                    for key, value in slider_updates.items():
-                        self.dependent_sliders[key].value = value
+                self.set_slider_values()
                     
                 # make the scan take 1 second
                 if self.sleep:
@@ -121,17 +114,24 @@ class Widgetizer():
         final_layout = VBox(
             [
                 HBox(self.figures),
-                VBox([slider_layout], layout=Layout(
-                    # flex='0 1 auto',
-                    height='auto',
-                    #min_width='1000px',
-                    width='1000px'  # 'auto'
-                )),
+                VBox(
+                    [slider_layout],
+                    layout=Layout(
+                        # flex='0 1 auto',
+                        height='auto',
+                        #min_width='1000px',
+                        width='1000px'  # 'auto'
+                    )
+                ),
             ],
             layout=layout,
         )
 
         return final_layout
+
+    # shell
+    def set_slider_values(self):
+        pass
 
     @staticmethod
     def local_plotter(**kwargs):

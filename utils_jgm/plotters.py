@@ -226,8 +226,8 @@ class MOSFETAmplifierWidgetizer(Widgetizer):
 
 
 def vds_vgs(
-    vgs_mag=3, Q_VGS=None, vT=0, NMOSFET=1, Rd=0.5, Rss=0.5, R1=500, R2=500,
-    plots_dict=None
+    vgs_mag=3, Q_VGS=None, vT=0, NMOSFET=1, CLM=0.0, Rd=0.5, Rss=0.5, R1=500,
+    R2=500, plots_dict=None
 ):
 
     # init
@@ -254,7 +254,7 @@ def vds_vgs(
     # ... 
     if Q_VGS is None:
         # compute all possible values of vG
-        iD, _ = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+        iD, _ = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET, CLM)
         vS = vMinus + iD*Rss if NMOSFET else vPlus - iD*Rss
         vG = vS + vGS
 
@@ -330,12 +330,18 @@ def vds_vgs(
         fig_input = bplt.figure()
         fig_input.layout.width = '600px'
         fig_input.layout.height = '300px'
-        plots_dict['input'] = bplt.plot(t, vGS_of_t)
+        plots_dict['input'] = bplt.plot(
+            t, vGS_of_t,
+            axes_options={'x': {"label": "t"}, "y": {"label": "v_{GS}"}}
+        )
 
         fig_output = bplt.figure()
         fig_output.layout.width = '600px'
         fig_output.layout.height = '300px'
-        plots_dict['output'] = bplt.plot(t, vDS_of_t)
+        plots_dict['output'] = bplt.plot(
+            t, vDS_of_t,
+            axes_options={'x': {"label": "t"}, "y": {"label": "v_{DS}"}}
+        )
 
         figures = [fig_amp, fig_input, fig_output]
     else:
@@ -407,6 +413,10 @@ class MOSFETOutputWidgetizer(Widgetizer):
                 description='NMOSFET', value=1, min=0, max=1, step=1,
                 readout_format='d', orientation='vertical',
             ),
+            'CLM': FloatSlider(
+                description='CLM', value=0.0, min=0.0, max=0.02, step=0.002,
+                readout_format='.2e', orientation='vertical',
+            ),
         }
         super().__init__()
 
@@ -415,7 +425,7 @@ class MOSFETOutputWidgetizer(Widgetizer):
         return id_vds(**kwargs)
 
 
-def id_vds(vGS=0, vT=0, NMOSFET=True, plots_dict=None):
+def id_vds(vGS=0, vT=0, NMOSFET=True, CLM=0.0, plots_dict=None):
 
     # init
     NMOSFET = bool(NMOSFET)
@@ -427,7 +437,7 @@ def id_vds(vGS=0, vT=0, NMOSFET=True, plots_dict=None):
     if not NMOSFET:
         vDS_max = -vDS_max
     vDS = np.linspace(0, vDS_max, N)
-    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET, CLM)
 
     # first time in
     if plots_dict is None:
@@ -495,6 +505,10 @@ class MOSFETTransferWidgetizer(Widgetizer):
                 description='NMOSFET', value=1, min=0, max=1, step=1,
                 readout_format='d', orientation='vertical',
             ),
+            'CLM': FloatSlider(
+                description='CLM', value=0.0, min=0.0, max=0.02, step=0.002,
+                readout_format='.2e', orientation='vertical',
+            ),
         }
         super().__init__()
 
@@ -503,7 +517,7 @@ class MOSFETTransferWidgetizer(Widgetizer):
         return id_vgs(**kwargs)
 
 
-def id_vgs(vDS=0, vT=0, NMOSFET=True, plots_dict=None):
+def id_vgs(vDS=0, vT=0, NMOSFET=True, CLM=0.0, plots_dict=None):
 
     # init
     NMOSFET = bool(NMOSFET)
@@ -513,7 +527,7 @@ def id_vgs(vDS=0, vT=0, NMOSFET=True, plots_dict=None):
 
     # range of vGS
     vGS = np.linspace(-vGS_mag_max, vGS_mag_max, N)
-    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET)
+    iD, colors = get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET, CLM)
 
     # you require vDS >= 0 for NMOS and vDS <= 0 for PMOS
     if (vDS < 0) == NMOSFET:
@@ -633,25 +647,25 @@ def get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET):
     return vDS, colors
 
 
-def get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET):
+def get_MOSFET_current(vGS, vDS, vT, k, N, NMOSFET, CLM):
 
-    # useful variable
+    # useful variables
     vDSS = vGS - vT
-
+    vExcess = vDSS - vDS
+    
     # booleans
     CUTOFF = np.array(vDSS < 0)
-    SATURATION = np.array(vDS >= vDSS)
-
+    SATURATION = np.array(vExcess <= 0)
+    
     if not NMOSFET:
         CUTOFF = ~CUTOFF
         SATURATION = ~SATURATION
+        CLM = -CLM
 
     # current in different regimes
     iD_cutoff = 0*vGS
     iD_triode = k*(vDSS*vDS - vDS**2/2)
-    iD_sat = k/2*vDSS**2
-
-    # pdb.set_trace()
+    iD_sat = k/2*vDSS**2*(1.0 - CLM*vExcess)
 
     # put all the currents together into one array
     iD = CUTOFF*iD_cutoff + (~CUTOFF)*((~SATURATION)*iD_triode + SATURATION*iD_sat)
@@ -807,15 +821,20 @@ class RLC_circuit():
         pass
     
     @property
-    def w0(self):
-        return 1/(self.L*self.C)**(1/2)
+    def tau(self):
+        return self.R*self.C if self.PARALLEL else self.L/self.R
+
+    @property
+    def sigma(self):
+        return 1/(2*self.tau)
     
     @property
     def bandwidth(self):
-        if self.PARALLEL:
-            return 1/(self.R*self.C)
-        else:
-            return self.R/self.L
+        return 2*self.sigma
+
+    @property
+    def w0(self):
+        return 1/(self.L*self.C)**(1/2)
         
     @property
     def quality_factor(self):
@@ -828,14 +847,19 @@ class RLC_circuit():
     @property
     def w_H(self):
         return self.bandwidth/2 + ((self.bandwidth/2)**2 + self.w0**2)**(1/2)
-        
+    
     @property
     def poles(self):
         # the roots of the charactertistic polynomial
         gg = ((self.bandwidth/2)**2 - self.w0**2)**(1/2)
-        w1 = +gg - self.bandwidth/2
-        w2 = -gg - self.bandwidth/2
-        return [w1, w2]
+        s1 = +gg - self.bandwidth/2
+        s2 = -gg - self.bandwidth/2
+        return [s1, s2]
+
+    @property
+    def max_pole_magnitude(self):
+        s1, s2 = self.poles
+        return max(np.abs(s1), np.abs(s2))
 
     def temporal_response(self, x0=0, xdot0=0, t_max=0.2, T=10000):
         legend_str = []
@@ -1058,132 +1082,115 @@ def get_circle_data(w0):
     )
 
 
-#########
-circuit = RLC_circuit(1, 1, 1, PARALLEL=True)
-frequencies = np.logspace(-3, 7, 1000)
-t_max = 0.2
-zeros = [0]
-#########
-
 class RLCWidgetizer(Widgetizer):
+
     def __init__(self):
+
+        # initial values (these will be adjusted by sliders)
         R = 50
         L = 1
         C = 100e-6
 
-        #################
+        # hard-coded to be consistent with the parameter ranges (min/max)
+        self.frequencies = np.logspace(-3, 7, 1000)
+        self.t_max = 0.2
+        self.zeros = [0]
+
+        self.circuit = RLC_circuit(R, L, C, PARALLEL=True)
+
         self.independent_sliders = {
             'R': FloatSlider(
-                description='R', value=R, min=0.5, max=1000, step=0.5,
-                readout_format='.2e', orientation='vertical',),
+                description='R', value=self.circuit.R, min=0.5, max=1000,
+                step=0.5, readout_format='.2e', orientation='vertical',
+            ),
             'L': FloatSlider(
-                description='L', value=L, min=1/3, max=10, step=1/3,
-                orientation='vertical'),
+                description='L', value=self.circuit.L, min=1/3, max=10,
+                step=1/3, orientation='vertical',
+            ),
             'C': FloatSlider(
-                description='C', value=C, min=10e-6, max=0.25, step=10e-6,
-                readout_format='.2e', orientation='vertical',
+                description='C', value=self.circuit.C, min=10e-6, max=0.25,
+                step=10e-6, readout_format='.2e', orientation='vertical',
             ),
             'x0': FloatSlider(
                 description='$x_0$', value=0, min=0, max=10, step=0.1,
-                orientation='vertical',),
+                orientation='vertical',
+            ),
             'xdot0': FloatSlider(
-                description='$\dot x_0$', value=1000, min=0, max=10000,
+                description=r'$\dot x_0$', value=1000, min=0, max=10000,
                 step=100, orientation='vertical',
             ),
+            'PARALLEL': IntSlider(
+                description='PARALLEL', value=int(self.circuit.PARALLEL),
+                min=0, max=1, step=1, readout_format='d',
+                orientation='vertical',
+            ),
         }
-        #################
-
+        
+        # these must be properties of self.circuit (see set_slider_values)
         self.dependent_sliders = {
-            'w0': FloatSlider(
-                description='$\omega_0$',
-                value=1/(self.independent_sliders['R'].value*self.independent_sliders['C'].value)**(1/2),
-                min=1/(self.independent_sliders['L'].max*self.independent_sliders['C'].max)**(1/2),
-                max=1/(self.independent_sliders['L'].min*self.independent_sliders['C'].min)**(1/2),
-                orientation='vertical',
-                step=5
-            ),
-            'bandwidth': FloatSlider(
-                description='$B_{\omega}$',
-                value=1/(self.independent_sliders['R'].value*self.independent_sliders['C'].value),
-                min=1/(self.independent_sliders['R'].max*self.independent_sliders['C'].max),
-                max=1/(self.independent_sliders['R'].min*self.independent_sliders['C'].min),
-                orientation='vertical',
-                step=5
-            )
+            'w0': FloatSlider(description=r'$\omega_0$', orientation='vertical'),
+            'sigma': FloatSlider(description=r'$\sigma$', orientation='vertical'),
+            'bandwidth': FloatSlider(description=r'$B_{\omega}$', orientation='vertical'),
+            'quality_factor': FloatSlider(description='$Q$', orientation='vertical'),
+            'w_L': FloatSlider(description=r'$\omega_L$', orientation='vertical'),
+            'w_H': FloatSlider(description=r'$\omega_H$', orientation='vertical'),
+            'max_pole_magnitude': FloatSlider(description=r'$\max|p|$', orientation='vertical'),
         }
-        self.dependent_sliders = {
-            **self.dependent_sliders,
-            'quality_factor': FloatSlider(
-                description='$Q$',
-                value=self.dependent_sliders['w0'].value/self.dependent_sliders['bandwidth'].value,
-                min=self.dependent_sliders['w0'].min/self.dependent_sliders['bandwidth'].max,
-                max=self.dependent_sliders['w0'].max/self.dependent_sliders['bandwidth'].min,
-                orientation='vertical',
-                step=5
-            ),
-            'w_L': FloatSlider(
-                description='$\omega_L$',
-                value=-self.dependent_sliders['bandwidth'].value/2 + (
-                    (self.dependent_sliders['bandwidth'].value/2)**2 + 
-                    self.dependent_sliders['w0'].value**2)**(1/2),
-                min=-self.dependent_sliders['bandwidth'].max/2 + (
-                    (self.dependent_sliders['bandwidth'].max/2)**2 +
-                    self.dependent_sliders['w0'].min**2)**(1/2),
-                max=-self.dependent_sliders['bandwidth'].min/2 + (
-                    (self.dependent_sliders['bandwidth'].max/2)**2 +
-                    self.dependent_sliders['w0'].max**2)**(1/2),
-                orientation='vertical',
-                step=5
-            ),
-            'w_H': FloatSlider(
-                description='$\omega_H$',
-                value=self.dependent_sliders['bandwidth'].value/2 + (
-                    (self.dependent_sliders['bandwidth'].value/2)**2 +
-                    self.dependent_sliders['w0'].value**2)**(1/2),
-                min=self.dependent_sliders['bandwidth'].min/2 + (
-                    (self.dependent_sliders['bandwidth'].min/2)**2 +
-                    self.dependent_sliders['w0'].min**2)**(1/2),
-                max=self.dependent_sliders['bandwidth'].max/2 + (
-                    (self.dependent_sliders['bandwidth'].max/2)**2 +
-                    self.dependent_sliders['w0'].max**2)**(1/2),
-                orientation='vertical',
-                step=5
-            ),
-            'p1': FloatSlider(
-                description='$p_1$',
-                #value=circuit.poles[0],
-                value=-self.dependent_sliders['bandwidth'].value/2 - (
-                    (self.dependent_sliders['bandwidth'].value/2)**2 -
-                    self.dependent_sliders['w0'].value**2)**(1/2),
-                # min=-self.dependent_sliders['bandwidth'].max/2 - (
-                #     (self.dependent_sliders['bandwidth'].max/2)**2 -
-                #     self.dependent_sliders['w0'].min)**(1/2),
-                # max=-self.dependent_sliders['bandwidth'].value/2 - (
-                #     (self.dependent_sliders['bandwidth'].value/2)**2 -
-                #     self.dependent_sliders['w0'].value)**(1/2),
-                orientation='vertical',
-            )
-        }
+        self.set_slider_values()
+        self.set_slider_extrema()
         
         super().__init__()
 
-    @staticmethod
-    def local_plotter(**kwargs):
-        return RLC_plotter(**kwargs)
+    def set_slider_values(self):
+        for key, slider in self.dependent_sliders.items():
+            slider.value = getattr(self.circuit, key)
+
+    def set_slider_extrema(self):
+        '''
+        Brute-force calculation of maximima and minima, assuming the min and
+         max occur at some extreme values of the independent parameters.
+        
+        (But is this true??)
+        '''
+
+        # shortcut notation
+        ind_slider = self.independent_sliders
+        for R in [ind_slider['R'].min, ind_slider['R'].max]:
+            for L in [ind_slider['L'].min, ind_slider['L'].max]:
+                for C in [ind_slider['C'].min, ind_slider['C'].max]:
+                    test_circuit = RLC_circuit(R, L, C, PARALLEL=True)
+                    for key, dep_slider in self.dependent_sliders.items():
+                        circuit_val = getattr(test_circuit, key)
+                        dep_slider.min = min(dep_slider.min, circuit_val)
+                        dep_slider.max = max(dep_slider.max, circuit_val)
+
+
+    # @staticmethod
+    def local_plotter(self, **kwargs):
+
+        # it seems like you could really just create a new circuit here
+        self.circuit.R = kwargs.pop('R')
+        self.circuit.L = kwargs.pop('L')
+        self.circuit.C = kwargs.pop('C')
+        PARALLEL = kwargs.pop('PARALLEL')
+
+        if PARALLEL != self.circuit.PARALLEL:
+            # the extrema are different for the other RLC
+            self.circuit.PARALLEL = PARALLEL
+            self.set_slider_extrema()
+
+        return RLC_plotter(
+            self.circuit, self.frequencies, self.t_max, self.zeros, **kwargs
+        )
 
 
 def RLC_plotter(
-    R=1, L=1, C=1, x0=0, xdot0=0, plots_dict=None,
+    circuit, frequencies, t_max, zeros, x0=0, xdot0=0, plots_dict=None
 ):
     if plots_dict is None:
         plots_dict = dict().fromkeys(
             ['temporal', 'Bode magnitude', 'Bode phase', 'pole-zero']
         )
-
-    # update the circuit
-    circuit.R = R
-    circuit.L = L
-    circuit.C = C
 
     # temporal response
     figures = []
@@ -1215,18 +1222,7 @@ def RLC_plotter(
             plots_dict['Bode phase']['figure'],
         ]
 
-    # # update sliders that are dependent on other sliders
-    slider_updates = {}
-    for key in ['w0', 'bandwidth', 'quality_factor', 'w_L', 'w_H']:
-        slider_updates[key] = getattr(circuit, key)
-
-    #####
-    # the slider display doesn't like when this is complex.  May be able to fix
-    #  with the readout_format
-    # slider_updates['p1'] = getattr(circuit, 'poles')[0]
-    #####
-
-    return figures, plots_dict, slider_updates
+    return figures, plots_dict
 
 
 class ConvolutionWidgetizer(Widgetizer):
@@ -1251,7 +1247,7 @@ class ConvolutionWidgetizer(Widgetizer):
                 description='$x_0$', value=0, min=0, max=10, step=0.1,
                 orientation='vertical',),
             'xdot0': FloatSlider(
-                description='$\dot x_0$', value=1000, min=0, max=10000,
+                description=r'$\dot x_0$', value=1000, min=0, max=10000,
                 step=100, orientation='vertical',
             ),
         }
@@ -1262,9 +1258,7 @@ class ConvolutionWidgetizer(Widgetizer):
         return convolution_plotter(**kwargs)
 
 
-def convolution_plotter(
-    R=1, L=1, C=1, x0=0, xdot0=0, plots_dict=None,
-):
+def convolution_plotter(R=1, L=1, C=1, x0=0, xdot0=0, plots_dict=None):
     if plots_dict is None:
         plots_dict = dict().fromkeys(
             ['temporal', 'Bode magnitude', 'Bode phase', 'pole-zero']

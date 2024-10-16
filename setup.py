@@ -29,7 +29,8 @@ setuptools.setup(
         'matplotlib', # ==3.6 because of incompat with tikzplotlib
         'scipy',
         # 'samplerate', causes problems on some machines....
-        'ipywidgets', 'tikzplotlib',
+        'ipywidgets',
+        'tikzplotlib @ git+https://git@github.com/jgmakin/tikzplotlib.git',
         # 'bqplot'
     ],
 )

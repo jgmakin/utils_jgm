@@ -125,7 +125,7 @@ def planar_flow(
     plots_dict['translation axis'].x = [0, u[0]]
     plots_dict['translation axis'].y = [0, u[1]]
     
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 class FunctionWidgetizer(Widgetizer):
@@ -195,7 +195,7 @@ def cubic_monomial(a=0, b=0, c=1, d=1, plots_dict=None):
     plots_dict['cubic monomial'].x = t
     plots_dict['cubic monomial'].y = x
 
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 class MOSFETAmplifierWidgetizer(Widgetizer):
@@ -357,7 +357,7 @@ def vds_vgs(
     plots_dict['input'].y = vGS_of_t
     plots_dict['output'].y = vDS_of_t
 
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 class MOSFETBiasCircuit(Widgetizer):
@@ -395,7 +395,7 @@ class MOSFETBiasCircuit(Widgetizer):
         figures, plots_dict, _ = vds_vgs(**kwargs)
         plots_dict.pop('input')
         plots_dict.pop('output')
-        return figures[0:1], plots_dict, {}
+        return figures[0:1], plots_dict
 
 
 class MOSFETOutputWidgetizer(Widgetizer):
@@ -487,7 +487,7 @@ def id_vds(vGS=0, vT=0, NMOSFET=True, CLM=0.0, plots_dict=None):
     plots_dict['output characteristic'].y = iD
     plots_dict['output characteristic'].color = colors
 
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 class MOSFETTransferWidgetizer(Widgetizer):
@@ -592,7 +592,7 @@ def id_vgs(vDS=0, vT=0, NMOSFET=True, CLM=0.0, plots_dict=None):
 
     plots_dict['zero volts'].y = np.linspace(0, max(iD), N)
 
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 def get_MOSFET_voltage(vGS, vT, vDS_max, iD_max, k, N, NMOSFET):
@@ -810,7 +810,7 @@ def rotating_complex_exponentials(
     plots_dict['average'].x = np.real(f3(np.linspace(t0, t, N)))
     plots_dict['average'].y = np.zeros(N)
     
-    return figures, plots_dict, {}
+    return figures, plots_dict
 
 
 class RLC_circuit():

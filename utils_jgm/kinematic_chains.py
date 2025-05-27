@@ -60,7 +60,6 @@ class KinematicChains:
         raise NotImplementedError('shell method -- jgm')
 
 
-
 class NumPyKinematicChains(KinematicChains):
 
     def __init__(self, **kwargs):
@@ -252,7 +251,6 @@ class TensorFlowKinematicChains(KinematicChains):
         raise NotImplementedError('Oops! Inverse kinematics not written yet!!')
 
 
-
 class Joint:
 
     @auto_attribute
@@ -298,7 +296,7 @@ class NumPyJoint(Joint):
     @property
     def unit_velocity(self):
         # force cross product to be a column vector
-        return np.cross(self.axis_location, self.motion_axis)[:,None]
+        return np.cross(self.axis_location, self.motion_axis)[:, None]
 
     def rodrigues(self):
         theta = np.reshape(self.angles, [-1, 1, 1])

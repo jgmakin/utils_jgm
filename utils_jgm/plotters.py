@@ -861,7 +861,7 @@ class RLC_circuit():
         s1, s2 = self.poles
         return max(np.abs(s1), np.abs(s2))
 
-    def temporal_response(self, x0=0, xdot0=0, t_max=0.2, T=10000):
+    def zero_input_response(self, x0=0, xdot0=0, t_max=0.2, T=10000):
         legend_str = []
         
         t = np.linspace(0, t_max, T)
@@ -880,7 +880,7 @@ class RLC_circuit():
                 x = a[0]*np.e**(s1*t) + a[1]*np.e**(s2*t)
                 legend_str.append('overdamped')
             else:
-                if s1==-s2:
+                if s1 == -s2:
                     w = abs(np.imag(s1))
                     a = np.array([[x0], [xdot0/w]])
                     x = a[0]*np.cos(w*t) + a[1]*np.sin(w*t)
@@ -907,9 +907,9 @@ class RLC_circuit():
 #######
 # consider adding zeros to circuit properties? and gain??
 #######
-def plot_temporal_response(circuit, x0, xdot0, t_max=0.2, line_t=None):
+def plot_zero_input_response(circuit, x0, xdot0, t_max=0.2, line_t=None):
     # temporal response
-    t, amplitude = circuit.temporal_response(x0, xdot0, t_max)
+    t, amplitude = circuit.zero_input_response(x0, xdot0, t_max)
     
     if line_t is None:
         fig_t = bplt.figure()
@@ -1116,7 +1116,7 @@ class RLCWidgetizer(Widgetizer):
                 orientation='vertical',
             ),
             'xdot0': FloatSlider(
-                description=r'$\dot x_0$', value=1000, min=0, max=10000,
+                description=r'$\dot x_0$', value=1000, min=-1000, max=10000,
                 step=100, orientation='vertical',
             ),
             'PARALLEL': IntSlider(
@@ -1194,7 +1194,7 @@ def RLC_plotter(
 
     # temporal response
     figures = []
-    plot_info = plot_temporal_response(
+    plot_info = plot_zero_input_response(
         circuit, x0, xdot0, t_max, plots_dict['temporal']
     )
     if plot_info is not None:

@@ -6,7 +6,8 @@ import six
 import time
 
 # third-party packages
-import tikzplotlib as tpl
+# import tikzplotlib as tpl
+import matplot2tikz as tpl
 
 
 def tpl_save(

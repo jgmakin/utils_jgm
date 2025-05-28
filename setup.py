@@ -30,7 +30,8 @@ setuptools.setup(
         'scipy',
         # 'samplerate', causes problems on some machines....
         'ipywidgets',
-        'tikzplotlib @ git+https://git@github.com/jgmakin/tikzplotlib.git',
+        # 'tikzplotlib @ git+https://git@github.com/jgmakin/tikzplotlib.git',
+        'matplot2tikz',
         # 'bqplot'
     ],
 )

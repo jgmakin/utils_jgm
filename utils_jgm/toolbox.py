@@ -284,11 +284,15 @@ def rescale(X, xmin, xmax, zmin, zmax):
      length of xmin, xmax, zmin, and zmax.
     '''
 
-    # vectorize
-    xmin = np.reshape(xmin, [1, -1])
-    zmin = np.reshape(zmin, [1, -1])
-    xmax = np.reshape(xmax, [1, -1])
-    zmax = np.reshape(zmax, [1, -1])
+    # # vectorize
+    xmin = xmin.reshape([1, -1])
+    zmin = zmin.reshape([1, -1])
+    xmax = xmax.reshape([1, -1])
+    zmax = zmax.reshape([1, -1])
+    # xmin = np.reshape(xmin, [1, -1])
+    # zmin = np.reshape(zmin, [1, -1])
+    # xmax = np.reshape(xmax, [1, -1])
+    # zmax = np.reshape(zmax, [1, -1])
 
     # lots of implicit expansion
     column_scaling = (zmax - zmin)/(xmax - xmin)
@@ -1012,3 +1016,12 @@ def plot_cov_ellipse(
     ax.add_patch(ellipse)
 
     return ellipse
+
+
+def print_fixed(
+    message, number, message_length=30, precision=2, exponent=-6, end='\n'
+):
+    print(
+        f"{message:<{message_length}} {number/(10**exponent):8.{precision}f}e{exponent}    ",
+        end=end
+    )

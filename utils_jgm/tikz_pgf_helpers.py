@@ -32,7 +32,7 @@ def tpl_save(
 
     # (1) STANDARD PRE-TIKZPICTURE LINES (before everything)
     default_extra_lines_start = {
-        '\\pgfplotsset{compat=1.15}%',
+        '\\pgfplotsset{compat=1.18}%',
         '\\providecommand{\\figwidth}{360pt}%',
         '\\providecommand{\\figheight}{310pt}%',
         '\\providecommand{\\thisXlabelopacity}{1.0}%',

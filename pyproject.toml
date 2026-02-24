@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools >= 64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utils_jgm"
+version = "0.8.0"
+authors = [
+  { name="J.G. Makin", email="jgmakin@gmail.com" },
+]
+description = "general python utilities"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    'numpy',
+    'matplotlib',
+    'scipy',
+    'ipywidgets',
+    'matplot2tikz',
+    # 'samplerate', causes problems on some machines....
+    # 'bqplot'
+]
+
+[project.urls]
+"Homepage" = "https://github.com/jgmakin/utils_jgm"

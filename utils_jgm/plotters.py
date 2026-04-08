@@ -5,6 +5,7 @@ import pdb
 import numpy as np
 from scipy.stats import multivariate_normal
 from scipy import signal
+import matplotlib.pyplot as mplt
 import bqplot as bq
 import bqplot.pyplot as bplt
 from ipywidgets import FloatSlider, IntSlider
@@ -903,174 +904,171 @@ class RLC_circuit():
         
         return frequencies, magnitude, phase
 
+    #######
+    # consider adding zeros to circuit properties? and gain??
+    #######
+    def plot_zero_input_response(self, x0, xdot0, t_max=0.2, line_t=None):
+        # temporal response
+        t, amplitude = self.zero_input_response(x0, xdot0, t_max)
+        
+        if line_t is None:
+            fig_t = bplt.figure()
+            line_t = bplt.plot(t, amplitude, 'm', stroke_width=3)    
+            return fig_t, line_t
+        else:
+            print('updating')
+            line_t.x = t
+            line_t.y = amplitude
 
-#######
-# consider adding zeros to circuit properties? and gain??
-#######
-def plot_zero_input_response(circuit, x0, xdot0, t_max=0.2, line_t=None):
-    # temporal response
-    t, amplitude = circuit.zero_input_response(x0, xdot0, t_max)
-    
-    if line_t is None:
-        fig_t = bplt.figure()
-        line_t = bplt.plot(t, amplitude, 'm', stroke_width=3)    
-        return fig_t, line_t
-    else:
-        print('updating')
-        line_t.x = t
-        line_t.y = amplitude
-    
+    def Bode_plot(
+        self, zeros, gain=1,
+        magnitude_plot=None, phase_plot=None, frequencies=None
+    ):
+        
+        # Compute the maginitude and phase responses--at all frequencies but also
+        #  again at the poles and zeros
+        plots = {'magnitude': magnitude_plot, 'phase': phase_plot}
+        titles = {'magnitude': '|H(j\u03C9)|', 'phase': '\u2220 H(j\u03C9)'}
 
-def Bode_plot(
-    circuit, zeros, gain=1,
-    magnitude_plot=None, phase_plot=None, frequencies=None
-):
-    
-    # Compute the maginitude and phase responses--at all frequencies but also
-    #  again at the poles and zeros
-    plots = {'magnitude': magnitude_plot, 'phase': phase_plot}
-    titles = {'magnitude': '|H(j\u03C9)|', 'phase': '\u2220 H(j\u03C9)'}
-
-    # superimpose each of the following plots
-    plot_specs = {
-        'all_frequencies': {
-            'frequencies': frequencies,
-            'responses': {'magnitude': None, 'phase': None},
-            'phase_response': None,
-            'plot_type': 'plot',
-            'marker': None,
-            'color': ['red']
-        },
-        'at poles': {
-            'frequencies': [abs(pole) for pole in circuit.poles if abs(pole) > 0],
-            'responses': {'magnitude': None, 'phase': None},
-            'plot_type': 'scatter',
-            'marker': 'cross',
-            'color': ['green']
-        },
-        'at zeros': {
-            'frequencies': [abs(zero) for zero in zeros if abs(zero) > 0],
-            'responses': {'magnitude': None, 'phase': None},
-            'plot_type': 'scatter',
-            'marker': 'circle',
-            'color': ['blue'],
-        },
-        'at corner frequencies': {
-            'frequencies': [abs(w) for w in [circuit.w_L, circuit.w_H] if abs(w) > 0],
-            'responses': {'magnitude': None, 'phase': None},
-            'plot_type': 'scatter',
-            'marker': 'diamond',
-            'color': ['purple']
+        # superimpose each of the following plots
+        plot_specs = {
+            'all_frequencies': {
+                'frequencies': frequencies,
+                'responses': {'magnitude': None, 'phase': None},
+                'phase_response': None,
+                'plot_type': 'plot',
+                'marker': None,
+                'color': ['red']
+            },
+            'at poles': {
+                'frequencies': [abs(pole) for pole in self.poles if abs(pole) > 0],
+                'responses': {'magnitude': None, 'phase': None},
+                'plot_type': 'scatter',
+                'marker': 'cross',
+                'color': ['green']
+            },
+            'at zeros': {
+                'frequencies': [abs(zero) for zero in zeros if abs(zero) > 0],
+                'responses': {'magnitude': None, 'phase': None},
+                'plot_type': 'scatter',
+                'marker': 'circle',
+                'color': ['blue'],
+            },
+            'at corner frequencies': {
+                'frequencies': [abs(w) for w in [self.w_L, self.w_H] if abs(w) > 0],
+                'responses': {'magnitude': None, 'phase': None},
+                'plot_type': 'scatter',
+                'marker': 'diamond',
+                'color': ['purple']
+            }
         }
-    }
 
-    # get all responses
-    for spec in plot_specs.values():
-        (
-            spec['frequencies'],
-            spec['responses']['magnitude'],
-            spec['responses']['phase']
-        ) = circuit.frequency_response(zeros, gain, spec['frequencies'])
-        spec['responses']['phase'] *= np.pi/180  # convert to radians
-    
-    # ....
-    scale_x = bq.LogScale()
-    for key, plot in plots.items():
+        # get all responses
+        for spec in plot_specs.values():
+            (
+                spec['frequencies'],
+                spec['responses']['magnitude'],
+                spec['responses']['phase']
+            ) = self.frequency_response(zeros, gain, spec['frequencies'])
+            spec['responses']['phase'] *= np.pi/180  # convert to radians
+        
+        # ....
+        scale_x = bq.LogScale()
+        for key, plot in plots.items():
+            if plot is None:
+                plot = {}
+                plot['figure'] = bplt.figure(
+                    title=titles[key],
+                    scales={'x': scale_x, 'y': bq.LinearScale()},
+                )
+                # fig_magnitude.axes = [
+                #     bq.axes.Axis(
+                #         label='\u03C9 (rad/s)',
+                #         tick_format='0.2e',
+                #         scale=scale_x,
+                #     ),
+                #     bq.axes.Axis(
+                #         label='dB',
+                #         tick_format='0.2f',
+                #         orientation='vertical',
+                #         scale=bq.LinearScale(),
+                #     )
+                # ]
+
+                for spec_name, spec in plot_specs.items():
+                    try:
+                        plot[spec_name] = getattr(bplt, spec['plot_type'])(
+                            spec['frequencies'], spec['responses'][key],
+                            marker=spec['marker'], colors=spec['color']
+                        )
+                    except:
+                        pdb.set_trace()
+
+                # plot['corner-frequency scatter'] = bplt.scatter(
+                #     zero_magnitudes,
+                #     response_at_zeros[key],
+                #     marker='circle'
+                # )
+            else:
+                for spec_name, spec in plot_specs.items():
+                    plot[spec_name].x = spec['frequencies']
+                    plot[spec_name].y = spec['responses'][key]
+
+                    # plot['line'].y = response[key]
+                    # plot['pole scatter'].x = pole_magnitudes
+                    # plot['pole scatter'].y = response_at_poles[key]
+                    # plot['zero scatter'].x = zero_magnitudes
+                    # plot['zero scatter'].y = response_at_zeros[key]
+
+            # update the plot
+            plots[key] = plot
+                
+        return plots['magnitude'], plots['phase']
+       
+    def pole_zero_plot(self, zeros, plot=None):
+
+        # for scaling properly
+        xmin = min([*np.real(self.poles), -self.w0])*1.4
+        xmax = max([*np.real(self.poles), self.w0])*1.4
+        ymin = min([*np.imag(self.poles), -self.w0])*1.4
+        ymax = max([*np.imag(self.poles), self.w0])*1.4
+        
         if plot is None:
             plot = {}
+
+            # the unit circle
             plot['figure'] = bplt.figure(
-                title=titles[key],
-                scales={'x': scale_x, 'y': bq.LinearScale()},
+                title='Pole-Zero plot',
+                scales={
+                    'x': bq.LinearScale(min=xmin, max=xmax),
+                    'y': bq.LinearScale(min=ymin, max=ymax),
+                },
+                x_axis_label='Re',
+                y_axis_label='Im',
+                min_aspect_ratio=(xmax-xmin)/(ymax-ymin),
+                max_aspect_ratio=(xmax-xmin)/(ymax-ymin),
+                #plot_height=500,
+                #tooltips=tooltips,
             )
-            # fig_magnitude.axes = [
-            #     bq.axes.Axis(
-            #         label='\u03C9 (rad/s)',
-            #         tick_format='0.2e',
-            #         scale=scale_x,
-            #     ),
-            #     bq.axes.Axis(
-            #         label='dB',
-            #         tick_format='0.2f',
-            #         orientation='vertical',
-            #         scale=bq.LinearScale(),
-            #     )
-            # ]
-
-            for spec_name, spec in plot_specs.items():
-                try:
-                    plot[spec_name] = getattr(bplt, spec['plot_type'])(
-                        spec['frequencies'], spec['responses'][key],
-                        marker=spec['marker'], colors=spec['color']
-                    )
-                except:
-                    pdb.set_trace()
-
-            # plot['corner-frequency scatter'] = bplt.scatter(
-            #     zero_magnitudes,
-            #     response_at_zeros[key],
-            #     marker='circle'
-            # )
+            plot['unit circle'] = bplt.plot(
+                *get_circle_data(self.w0),
+                line_dash='dashed'
+            )    
+            plot['zeros'] = bplt.scatter(np.real(zeros), np.imag(zeros))
+            plot['poles'] = bplt.scatter(
+                np.real(self.poles),
+                np.imag(self.poles),
+                marker='cross'
+            )
         else:
-            for spec_name, spec in plot_specs.items():
-                plot[spec_name].x = spec['frequencies']
-                plot[spec_name].y = spec['responses'][key]
-
-                # plot['line'].y = response[key]
-                # plot['pole scatter'].x = pole_magnitudes
-                # plot['pole scatter'].y = response_at_poles[key]
-                # plot['zero scatter'].x = zero_magnitudes
-                # plot['zero scatter'].y = response_at_zeros[key]
-
-        # update the plot
-        plots[key] = plot
+            plot['unit circle'].x, plot['unit circle'].y = get_circle_data(self.w0)
+            plot['zeros'].x, plot['zeros'].y = np.real(zeros), np.imag(zeros)
+            plot['poles'].x, plot['poles'].y = np.real(self.poles), np.imag(self.poles)
+            #######
+            # update aspect ratio
+            #######
             
-    return plots['magnitude'], plots['phase']
-
-        
-def pole_zero_plot(circuit, zeros, plot=None):
-
-    # for scaling properly
-    xmin = min([*np.real(circuit.poles), -circuit.w0])*1.1
-    xmax = max([*np.real(circuit.poles), circuit.w0])*1.1
-    ymin = min([*np.imag(circuit.poles), -circuit.w0])*1.1
-    ymax = max([*np.imag(circuit.poles), circuit.w0])*1.1
-    
-    if plot is None:
-        plot = {}
-
-        # the unit circle
-        plot['figure'] = bplt.figure(
-            title='Pole-Zero plot',
-            scales={
-                'x': bq.LinearScale(min=xmin, max=xmax),
-                'y': bq.LinearScale(min=ymin, max=ymax),
-            },
-            x_axis_label='Re',
-            y_axis_label='Im',
-            min_aspect_ratio=(xmax-xmin)/(ymax-ymin),
-            max_aspect_ratio=(xmax-xmin)/(ymax-ymin),
-            #plot_height=500,
-            #tooltips=tooltips,
-        )
-        plot['unit circle'] = bplt.plot(
-            *get_circle_data(circuit.w0),
-            line_dash='dashed'
-        )    
-        plot['zeros'] = bplt.scatter(np.real(zeros), np.imag(zeros))
-        plot['poles'] = bplt.scatter(
-            np.real(circuit.poles),
-            np.imag(circuit.poles),
-            marker='cross'
-        )
-    else:
-        plot['unit circle'].x, plot['unit circle'].y = get_circle_data(circuit.w0)
-        plot['zeros'].x, plot['zeros'].y = np.real(zeros), np.imag(zeros)
-        plot['poles'].x, plot['poles'].y = np.real(circuit.poles), np.imag(circuit.poles)
-        #######
-        # update aspect ratio
-        #######
-        
-    return plot
+        return plot
 
 
 def get_circle_data(w0):
@@ -1164,7 +1162,6 @@ class RLCWidgetizer(Widgetizer):
                         dep_slider.min = min(dep_slider.min, circuit_val)
                         dep_slider.max = max(dep_slider.max, circuit_val)
 
-
     # @staticmethod
     def local_plotter(self, **kwargs):
 
@@ -1194,7 +1191,7 @@ def RLC_plotter(
 
     # temporal response
     figures = []
-    plot_info = plot_zero_input_response(
+    plot_info = circuit.plot_zero_input_response(
         circuit, x0, xdot0, t_max, plots_dict['temporal']
     )
     if plot_info is not None:
@@ -1202,16 +1199,16 @@ def RLC_plotter(
         figures.append(fig)
 
     # pole-zero plot
-    plots_dict['pole-zero'] = pole_zero_plot(
-        circuit, zeros, plots_dict['pole-zero']
+    plots_dict['pole-zero'] = circuit.pole_zero_plot(
+        zeros, plots_dict['pole-zero']
     )
     if plots_dict['pole-zero']['figure'] is not None:
         # ...and it never should be...
         figures.append(plots_dict['pole-zero']['figure'])
 
     # Bode plots
-    plot_info = Bode_plot(
-        circuit, zeros, 1/circuit.C, plots_dict['Bode magnitude'],
+    plot_info = circuit.Bode_plot(
+        zeros, 1/circuit.C, plots_dict['Bode magnitude'],
         plots_dict['Bode phase'],
         frequencies=frequencies,
     )
@@ -1223,6 +1220,63 @@ def RLC_plotter(
         ]
 
     return figures, plots_dict
+
+
+# it may be useful to make a pole-zero plot in *matplotlib*
+def pole_zero_plotter(
+    resonant_circle, poles, zeros,
+    fontsize=15, markersize='6', color='blue', ax=None,
+):
+
+    if ax is None:
+        fig, ax = mplt.subplots()
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    if resonant_circle is not None:
+        radius = max(resonant_circle.x)
+
+        # the circle
+        ax.plot(
+            resonant_circle.x, resonant_circle.y,
+            color='black', linestyle='dashed'
+        )
+        # ax.set_xlabel('Re')
+        # ax.set_ylabel('Im')
+        ax.annotate(
+            'Re', (radius, 0), xytext=(1.1*radius, 0.1*radius),
+            fontsize=fontsize
+        )
+        ax.annotate(
+            'Im', (radius, 0), xytext=(0.1*radius, 1.1*radius),
+            fontsize=fontsize
+        )
+
+        # a "spoke" to label with \omega_0
+        spoke_point = [radius*np.cos(tau/8), -radius*np.sin(tau/8)]
+        ax.plot(
+            [0, spoke_point[0]], [0, spoke_point[1]],
+            color='black', linestyle='dotted'
+        )
+        ax.annotate(
+            r'$\omega_0$', (radius, 0),
+            xytext=(1.0*spoke_point[0], 1.1*spoke_point[1]), fontsize=fontsize,
+        )
+
+        ax.axhline(y=0, color='k')
+        ax.axvline(x=0, color='k')
+    
+    if poles is not None:
+        ax.plot(
+            poles.x, poles.y, 'x',
+            mfc=color, mec=color, markersize=markersize, color=color
+        )
+
+    if zeros is not None:
+        ax.plot(
+            zeros.x, zeros.y, 'o',
+            mfc=color, mec=color, markersize=markersize, color=color
+        )
 
 
 class ConvolutionWidgetizer(Widgetizer):
@@ -1258,56 +1312,56 @@ class ConvolutionWidgetizer(Widgetizer):
         return convolution_plotter(**kwargs)
 
 
-def convolution_plotter(R=1, L=1, C=1, x0=0, xdot0=0, plots_dict=None):
-    if plots_dict is None:
-        plots_dict = dict().fromkeys(
-            ['temporal', 'Bode magnitude', 'Bode phase', 'pole-zero']
-        )
+# def convolution_plotter(R=1, L=1, C=1, x0=0, xdot0=0, plots_dict=None):
+#     if plots_dict is None:
+#         plots_dict = dict().fromkeys(
+#             ['temporal', 'Bode magnitude', 'Bode phase', 'pole-zero']
+#         )
 
-    # update the circuit
-    circuit.R = R
-    circuit.L = L
-    circuit.C = C
+#     # update the circuit
+#     circuit.R = R
+#     circuit.L = L
+#     circuit.C = C
 
-    # temporal response
-    figures = []
-    plot_info = plot_temporal_response(
-        circuit, x0, xdot0, t_max, plots_dict['temporal']
-    )
-    if plot_info is not None:
-        fig, plots_dict['temporal'] = plot_info
-        figures.append(fig)
+#     # temporal response
+#     figures = []
+#     plot_info = plot_temporal_response(
+#         circuit, x0, xdot0, t_max, plots_dict['temporal']
+#     )
+#     if plot_info is not None:
+#         fig, plots_dict['temporal'] = plot_info
+#         figures.append(fig)
 
-    # pole-zero plot
-    plots_dict['pole-zero'] = pole_zero_plot(
-        circuit, zeros, plots_dict['pole-zero']
-    )
-    if plots_dict['pole-zero']['figure'] is not None:
-        # ...and it never should be...
-        figures.append(plots_dict['pole-zero']['figure'])
+#     # pole-zero plot
+#     plots_dict['pole-zero'] = pole_zero_plot(
+#         circuit, zeros, plots_dict['pole-zero']
+#     )
+#     if plots_dict['pole-zero']['figure'] is not None:
+#         # ...and it never should be...
+#         figures.append(plots_dict['pole-zero']['figure'])
 
-    # Bode plots
-    plot_info = Bode_plot(
-        circuit, zeros, 1/circuit.C, plots_dict['Bode magnitude'],
-        plots_dict['Bode phase'],
-        frequencies=frequencies,
-    )
-    if plot_info is not None:
-        plots_dict['Bode magnitude'], plots_dict['Bode phase'] = plot_info
-        figures += [
-            plots_dict['Bode magnitude']['figure'],
-            plots_dict['Bode phase']['figure'],
-        ]
+#     # Bode plots
+#     plot_info = Bode_plot(
+#         circuit, zeros, 1/circuit.C, plots_dict['Bode magnitude'],
+#         plots_dict['Bode phase'],
+#         frequencies=frequencies,
+#     )
+#     if plot_info is not None:
+#         plots_dict['Bode magnitude'], plots_dict['Bode phase'] = plot_info
+#         figures += [
+#             plots_dict['Bode magnitude']['figure'],
+#             plots_dict['Bode phase']['figure'],
+#         ]
 
-    # # update sliders that are dependent on other sliders
-    slider_updates = {}
-    for key in ['w0', 'bandwidth', 'quality_factor', 'w_L', 'w_H']:
-        slider_updates[key] = getattr(circuit, key)
+#     # # update sliders that are dependent on other sliders
+#     slider_updates = {}
+#     for key in ['w0', 'bandwidth', 'quality_factor', 'w_L', 'w_H']:
+#         slider_updates[key] = getattr(circuit, key)
 
-    #####
-    # the slider display doesn't like when this is complex.  May be able to fix
-    #  with the readout_format
-    # slider_updates['p1'] = getattr(circuit, 'poles')[0]
-    #####
+#     #####
+#     # the slider display doesn't like when this is complex.  May be able to fix
+#     #  with the readout_format
+#     # slider_updates['p1'] = getattr(circuit, 'poles')[0]
+#     #####
 
-    return figures, plots_dict, slider_updates
+#     return figures, plots_dict, slider_updates

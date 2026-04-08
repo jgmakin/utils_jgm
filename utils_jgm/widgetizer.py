@@ -87,10 +87,11 @@ class Widgetizer():
         # the layout of plots and sliders
         layout = Layout(
             # flex='0 1 auto',
-            height='auto',
+            # height='auto',
+            height='1000px',
             # min_height='4000px',
             # width='auto',
-            width='4000px',
+            width='1700px',
         )
 
         # create buttons for scanning the space
@@ -110,10 +111,15 @@ class Widgetizer():
             # HBox([sliders['p1']]),
         ])
 
+        # force the figures to stretch to fit the container
+        for fig in self.figures:
+            fig.layout.width = '100%' 
+            fig.layout.min_width = '400px'  # prevent from disappearing
+
         # put figure together with sliders
         final_layout = VBox(
             [
-                HBox(self.figures),
+                HBox(self.figures, layout=Layout(width='100%')),
                 VBox(
                     [slider_layout],
                     layout=Layout(

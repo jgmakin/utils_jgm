@@ -16,7 +16,8 @@ dependencies = [
     'matplotlib',
     'scipy',
     'ipywidgets',
-    'matplot2tikz',
+    'matplot2tikz @ git+https://github.com/AlexChrzanowski/matplot2tikzfix',
+    # 'matplot2tikz',
     # 'samplerate', causes problems on some machines....
     # 'bqplot'
 ]

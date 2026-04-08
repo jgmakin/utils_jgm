@@ -4,6 +4,7 @@ general python utilities
 ## Installation:
 ```
 git clone https://github.com/jgmakin/utils_jgm.git
+pip install -e utils_jgm
 ```
 
 ## Setup:

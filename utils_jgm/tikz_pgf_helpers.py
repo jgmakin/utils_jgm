@@ -7,7 +7,7 @@ import time
 
 # third-party packages
 # import tikzplotlib as tpl
-import matplot2tikz as tpl
+import makintikz as tpl
 
 
 def tpl_save(
